@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { DEFAULT_SETTINGS, buildDataset, dayKeyInZone, monthOfInZone, resolveSettings, weekDaysInZone } from '@ghost-hours/core';
 import type { Block, Client, Dataset, Evidence } from '@ghost-hours/core';
@@ -344,13 +344,40 @@ function toPersisted(state: AppState): PersistedState {
   };
 }
 
+/**
+ * Writes the state to IndexedDB after every change, once the restore has
+ * landed. A failed write is reported in the state, never thrown: losing a
+ * gesture silently is worse than showing a warning.
+ */
+function usePersist(state: AppState, hydrated: boolean, setSaveError: (message: string | null) => void): void {
+  useEffect(() => {
+    if (!hydrated) return;
+    let cancelled = false;
+    void saveState(toPersisted(state)).then((result) => {
+      if (cancelled || result.ok) return;
+      setSaveError(result.errors.join('; '));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, state, setSaveError]);
+}
+
 /* ---------------------------------------------------------- the shell -- */
 
 export function AppProvider(props: { children: ReactNode }): JSX.Element {
   const [state, rawDispatch] = useReducer(reduce, initialState(EMPTY_SETTINGS));
   const [hydrated, setHydrated] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const dispatch = useCallback((action: AppAction) => rawDispatch(action), []);
+  // Restoring from IndexedDB is asynchronous: a gesture made in the first
+  // milliseconds must not be erased by the restored state, so it is replayed
+  // on top of it once the restore lands.
+  const hydratedRef = useRef(false);
+  const pendingRef = useRef<AppAction[]>([]);
+  const dispatch = useCallback((action: AppAction) => {
+    if (!hydratedRef.current) pendingRef.current.push(action);
+    rawDispatch(action);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -365,6 +392,9 @@ export function AppProvider(props: { children: ReactNode }): JSX.Element {
         rawDispatch({ type: 'importDataset', dataset: restored.dataset });
         rawDispatch({ type: 'importEvidence', evidence: restored.evidence });
       }
+      for (const action of pendingRef.current) rawDispatch(action);
+      pendingRef.current = [];
+      hydratedRef.current = true;
     }).finally(() => {
       if (!cancelled) setHydrated(true);
     });
@@ -373,17 +403,7 @@ export function AppProvider(props: { children: ReactNode }): JSX.Element {
     };
   }, []);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    let cancelled = false;
-    void saveState(toPersisted(state)).then((result) => {
-      if (cancelled || result.ok) return;
-      setSaveError(result.errors.join('; '));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [hydrated, state]);
+  usePersist(state, hydrated, setSaveError);
 
   const value = useMemo<AppState>(
     () => (saveError === null ? state : { ...state, importReport: [...state.importReport, saveError] }),
