@@ -79,6 +79,7 @@ jobs:
       - name: Contest compliance
         shell: bash
         run: |
+          source .github/ci/toolchain.sh
           node scripts/check-kiro-tracked.mjs
           node scripts/check-privacy.mjs
           node scripts/check-no-network.mjs
