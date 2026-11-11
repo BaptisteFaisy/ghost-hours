@@ -12,6 +12,7 @@
   "dependencies": {
     "@ghost-hours/billing": "workspace:*",
     "@ghost-hours/core": "workspace:*",
+    "@ghost-hours/fixture-sample-month": "workspace:*",
     "@ghost-hours/ics": "workspace:*",
     "@ghost-hours/intervals": "workspace:*",
     "@ghost-hours/mapping": "workspace:*",
