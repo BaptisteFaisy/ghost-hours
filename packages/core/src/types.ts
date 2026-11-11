@@ -138,6 +138,22 @@ export type BlockStatus = 'proposed' | 'confirmed' | 'rejected' | 'conflict' | '
 
 export type BlockOrigin = 'git-session' | 'meeting' | 'merged' | 'manual';
 
+/**
+ * The decision behind a block's bounds (spec D.5, steps 4 to 8). Structured
+ * rather than a sentence: the wording belongs to the interface, the facts
+ * belong to the domain.
+ */
+export type BlockReason =
+  | { readonly kind: 'checkout'; readonly repo: string; readonly minutes: number }
+  | { readonly kind: 'assumed'; readonly minutes: number;
+      readonly boundedBy: 'previous-proof' | 'workday-start' | 'none' }
+  | { readonly kind: 'resume'; readonly pauseMinutes: number }
+  | { readonly kind: 'meeting' }
+  | { readonly kind: 'manual' }
+  | { readonly kind: 'merged'; readonly count: number }
+  | { readonly kind: 'trimmed'; readonly byClient: string }
+  | { readonly kind: 'conflict'; readonly withClient: string };
+
 export type ConfidenceLevel = 'solid' | 'likely' | 'to-confirm';
 
 /** A chunk of time attributed to one client, proposed or decided by the user. */
@@ -160,6 +176,11 @@ export interface Block {
   /** User edited the bounds by hand: do not re-derive them. */
   readonly adjusted: boolean;
   readonly note?: string;
+  /**
+   * Why the block starts and ends where it does, so the reviewer checks the
+   * machine's reasoning instead of trusting it.
+   */
+  readonly reason?: BlockReason;
 }
 
 /** Contradictory evidence: two clients claim the same minutes (HEU-F-14). */
@@ -232,11 +253,24 @@ export interface ReconstructionResult {
   readonly blocks: readonly Block[];
   readonly conflicts: readonly Conflict[];
   readonly orphanEvidence: readonly Evidence[];
+  /**
+   * Evidence deliberately set aside (automation commits, and anything too
+   * short to propose). Listed, never silently dropped.
+   */
+  readonly ignoredEvidence?: readonly Evidence[];
   readonly settings: ReconstructionSettings;
 }
 
 export interface ReconstructionSettings {
   readonly gapMaxMinutes: Minutes;
+  /**
+   * A pause inside a working day (lunch, a call): past this gap the session is
+   * cut, but **without** an assumed lead-in — a pause is not work, so nothing
+   * is invented before the work resumes. Must stay below `gapMaxMinutes`.
+   */
+  readonly breakMaxMinutes: Minutes;
+  /** Drop commits produced by automation (bots, merge queues) and list them. */
+  readonly ignoreAutomation: boolean;
   readonly leadInDefaultMinutes: Minutes;
   readonly leadInMaxMinutes: Minutes;
   readonly minSessionMinutes: Minutes;

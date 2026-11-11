@@ -7,6 +7,7 @@ import { removeRule, upsertRule } from '@ghost-hours/mapping';
 import { loadSampleMonth } from '@ghost-hours/fixture-sample-month';
 import { mergeEvidence, reconstruct } from './reconstruct.ts';
 import { clearState, loadState, saveState } from './persistence.ts';
+import { appendAudit, AUDITED_ACTIONS, describeAction } from './audit.ts';
 import { calendarEvidence } from './calendar.ts';
 import type { PersistedState } from './persistence.ts';
 import { DEFAULT_ACTIVE_MONTH, initialState } from './types.ts';
@@ -51,6 +52,7 @@ function withReconstruction(state: AppState, patch: Partial<AppState> = {}): App
     blocks: outcome.blocks,
     conflicts: outcome.conflicts,
     calibration: outcome.calibration,
+    ignoredEvidence: outcome.ignored,
     orphanEvidence: outcome.orphans,
     evidence: merged,
   };
@@ -101,7 +103,25 @@ function instantOf(item: Evidence): number {
 
 /* ------------------------------------------------------- the reducer -- */
 
+/**
+ * Every decision leaves a trace: the reducer appends an audit entry for the
+ * actions that change data, never for the ones that only move the view.
+ */
 function reduce(state: AppState, action: AppAction): AppState {
+  const next = applyAction(state, action);
+  if (!AUDITED_ACTIONS.has(action.type)) return next;
+  const detail = describeAction(action as unknown as Record<string, unknown>);
+  return {
+    ...next,
+    audit: appendAudit(state.audit, {
+      at: Date.now(),
+      action: action.type,
+      ...(detail === undefined ? {} : { detail }),
+    }),
+  };
+}
+
+function applyAction(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'loadSampleMonth': return loadSample(state);
     case 'importEvidence': return withReconstruction(state, { evidence: mergeEvidence(state.evidence, action.evidence) });
@@ -115,6 +135,8 @@ function reduce(state: AppState, action: AppAction): AppState {
     case 'splitBlock': return splitBlock(state, action.blockId, action.at);
     case 'changeClient': return changeClient(state, action.blockId, action.clientId, action.projectId);
     case 'resolveConflict': return resolveConflict(state, action.conflictId, action.keepBlockId);
+    case 'splitConflict': return splitConflict(state, action.conflictId);
+    case 'restoreAudit': return { ...state, audit: action.entries };
     case 'confirmDay': return { ...state, blocks: setStatusIn(state.blocks, dayIds(state, action.dayKey), 'confirmed') };
     case 'confirmWeek': return { ...state, blocks: setStatusIn(state.blocks, weekIds(state, action.weekStart), 'confirmed') };
     case 'upsertClient': return withReconstruction(state, { clients: upsertClient(action.client, state.clients) });
@@ -157,6 +179,7 @@ function loadSample(state: AppState): AppState {
     blocks: outcome.blocks,
     conflicts: outcome.conflicts,
     calibration: outcome.calibration,
+    ignoredEvidence: outcome.ignored,
     orphanEvidence: outcome.orphans,
     declaredMinutes: { ...sample.declaredMinutes },
     activeMonth: monthOfEvidence(evidence, state.settings.timeZone),
@@ -299,6 +322,38 @@ function resolveConflict(state: AppState, conflictId: string, keepBlockId: strin
   return { ...state, blocks, conflicts };
 }
 
+/**
+ * The third way out of a contradiction: share the minutes. Each side keeps the
+ * half of the overlap that is closest to it, both blocks come back as
+ * *proposed* (so the user still confirms them) and both are marked adjusted,
+ * which is what keeps a later reconstruction from undoing the decision.
+ */
+function splitConflict(state: AppState, conflictId: string): AppState {
+  const conflict = state.conflicts.find((item) => item.id === conflictId);
+  if (conflict === undefined) return state;
+  const involved = state.blocks
+    .filter((block) => conflict.blockIds.includes(block.id))
+    .sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
+  const first = involved[0];
+  const second = involved[1];
+  const middle = Math.round((conflict.start + conflict.end) / 2);
+  const blocks = state.blocks.map((block) => {
+    if (first !== undefined && block.id === first.id) {
+      return { ...block, end: Math.max(block.start, Math.min(middle, block.end)), status: 'proposed' as const, adjusted: true };
+    }
+    if (second !== undefined && block.id === second.id) {
+      return { ...block, start: Math.min(block.end, Math.max(middle, block.start)), status: 'proposed' as const, adjusted: true };
+    }
+    if (conflict.blockIds.includes(block.id)) return { ...block, status: 'rejected' as const };
+    return block;
+  });
+  return {
+    ...state,
+    blocks,
+    conflicts: state.conflicts.map((item) => (item.id === conflictId ? { ...item, resolved: true } : item)),
+  };
+}
+
 function markPeriodInvoiced(
   state: AppState,
   clientId: string,
@@ -340,6 +395,7 @@ function toPersisted(state: AppState): PersistedState {
     annexDetail: state.annexDetail,
     activeMonth: state.activeMonth,
     activeWeekStart: state.activeWeekStart,
+    audit: state.audit,
   };
 }
 
@@ -390,6 +446,9 @@ export function AppProvider(props: { children: ReactNode }): JSX.Element {
       if (restored !== null) {
         rawDispatch({ type: 'importDataset', dataset: restored.dataset });
         rawDispatch({ type: 'importEvidence', evidence: restored.evidence });
+        if (restored.audit !== undefined && restored.audit.length > 0) {
+          rawDispatch({ type: 'restoreAudit', entries: restored.audit });
+        }
       }
       for (const action of pendingRef.current) rawDispatch(action);
       pendingRef.current = [];

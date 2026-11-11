@@ -1,4 +1,4 @@
-import type { Block, Evidence, Instant, ReconstructionSettings } from '@ghost-hours/core';
+import type { Block, BlockReason, Evidence, Instant, ReconstructionSettings } from '@ghost-hours/core';
 import { blockId } from '@ghost-hours/core';
 import {
   coverageRatio,
@@ -14,6 +14,22 @@ import type { BlockDraft, PointProof, Session } from './types.ts';
 
 /** Steps 6 to 9 of D.5: build drafts, resolve overlaps, merge, grade. */
 
+/** Why this session starts where it does (shown verbatim to the reviewer). */
+export function sessionReason(session: Session): BlockReason {
+  const first = session.points[0]?.at ?? session.start;
+  if (session.startKind === 'checkout') {
+    return { kind: 'checkout', repo: session.repo ?? '', minutes: Math.round((first - session.start) / 60_000) };
+  }
+  if (session.startKind === 'resume') {
+    return { kind: 'resume', pauseMinutes: Math.round(session.pauseMinutes) };
+  }
+  return {
+    kind: 'assumed',
+    minutes: Math.round(session.assumedLeadInMinutes),
+    boundedBy: session.boundedBy,
+  };
+}
+
 export function sessionDrafts(sessions: readonly Session[]): BlockDraft[] {
   return sessions.map((session) => ({
     start: session.start,
@@ -22,6 +38,7 @@ export function sessionDrafts(sessions: readonly Session[]): BlockDraft[] {
     origin: 'git-session' as const,
     evidenceIds: session.points.map((point) => point.evidence.id),
     assumedLeadInMinutes: session.assumedLeadInMinutes,
+    reason: sessionReason(session),
   }));
 }
 
@@ -41,6 +58,7 @@ export function spanDrafts(evidence: readonly Evidence[], origin: 'meeting' | 'm
       origin,
       evidenceIds: [item.id],
       assumedLeadInMinutes: 0,
+      reason: origin === 'meeting' ? { kind: 'meeting' } : { kind: 'manual' },
     });
   }
   return drafts;
@@ -122,6 +140,7 @@ function constituentsOf(draft: BlockDraft): readonly string[] {
 /** Step 8: a meeting and a session of the same client that touch become one. */
 export function mergeSameClient(drafts: readonly BlockDraft[]): BlockDraft[] {
   const merged: BlockDraft[] = [];
+  const mergedCount = new Map<BlockDraft, number>();
   const byClient = new Map<string, BlockDraft[]>();
   for (const draft of drafts) {
     const list = byClient.get(draft.clientId) ?? [];
@@ -133,11 +152,13 @@ export function mergeSameClient(drafts: readonly BlockDraft[]): BlockDraft[] {
     let current: BlockDraft | null = null;
     for (const draft of list) {
       if (current && draft.start <= current.end) {
+        mergedCount.set(current, (mergedCount.get(current) ?? 1) + 1);
         current = {
           start: current.start,
           end: Math.max(current.end, draft.end),
           clientId,
           origin: 'merged',
+          reason: { kind: 'merged', count: mergedCount.get(current) ?? 2 },
           // Sorted: the block must not depend on the order the drafts met.
           evidenceIds: [...new Set([...current.evidenceIds, ...draft.evidenceIds])].sort(),
           assumedLeadInMinutes: current.assumedLeadInMinutes,
@@ -270,6 +291,7 @@ export function finalise(input: FinaliseInput): Block[] {
       clientId: draft.clientId,
       projectId: null,
       status: draft.conflicted === true || input.conflictBlockKeys.has(key) ? 'conflict' : 'proposed',
+      reason: draft.reason,
       origin: draft.origin,
       provenShare: share,
       confidence: manual ? 'to-confirm' : confidenceOf(share * 1000, 1000),

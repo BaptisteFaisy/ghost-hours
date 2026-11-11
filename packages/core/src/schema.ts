@@ -36,8 +36,25 @@ export const clientSchema = z.object({
   rules: z.array(mappingRuleSchema),
 });
 
+/** Structured explanation of a block's bounds, mirroring `BlockReason`. */
+export const blockReasonSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('checkout'), repo: z.string(), minutes: z.number() }),
+  z.object({
+    kind: z.literal('assumed'),
+    minutes: z.number(),
+    boundedBy: z.enum(['previous-proof', 'workday-start', 'none']),
+  }),
+  z.object({ kind: z.literal('resume'), pauseMinutes: z.number() }),
+  z.object({ kind: z.literal('meeting') }),
+  z.object({ kind: z.literal('manual') }),
+  z.object({ kind: z.literal('merged'), count: z.number() }),
+  z.object({ kind: z.literal('trimmed'), byClient: z.string() }),
+  z.object({ kind: z.literal('conflict'), withClient: z.string() }),
+]);
+
 export const blockSchema = z.object({
   id: z.string().min(1),
+  reason: blockReasonSchema.optional(),
   start: z.number().int(),
   end: z.number().int(),
   clientId: z.string().min(1),
@@ -65,6 +82,10 @@ export const conflictSchema = z.object({
 
 export const settingsSchema = z.object({
   gapMaxMinutes: z.number().positive(),
+  // Optional on input, required on output: a dataset saved before these knobs
+  // existed still parses, and the app always sees a complete settings object.
+  breakMaxMinutes: z.number().positive().default(60),
+  ignoreAutomation: z.boolean().default(true),
   leadInDefaultMinutes: z.number().positive(),
   leadInMaxMinutes: z.number().positive(),
   minSessionMinutes: z.number().positive(),
