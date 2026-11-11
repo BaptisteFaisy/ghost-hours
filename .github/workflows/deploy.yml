@@ -1,7 +1,13 @@
 name: Deploy (GitHub Pages)
 
-# Static hosting for the judges: no account, no server, one URL.
-# Runs outside pull requests (a deploy is not a PR check), on `main` only.
+# Publishes the built app on the `gh-pages` branch, which is what GitHub Pages
+# serves for this repository (build type "legacy", source `gh-pages` / root).
+# The site therefore lives **in the repository**, on a branch of its own: no
+# artifact store, no deployment API, and the judges' URL keeps working as long
+# as the repository does (the contest requires it until 29 January 2027).
+#
+# Runs outside pull requests — a deploy is not a review check — and stays
+# inside the five-minute budget like every other job.
 on:
   push:
     branches: [main]
@@ -10,6 +16,7 @@ on:
       - "packages/**"
       - "fixtures/**"
       - "pnpm-lock.yaml"
+      - "package.json"
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
@@ -18,13 +25,11 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 jobs:
-  build:
-    name: build-site
+  publish:
+    name: publish-site
     runs-on: [self-hosted, linux, x64, ghost-hours-worker]
     timeout-minutes: 5
     steps:
@@ -33,35 +38,50 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
           clean: false
+
       - name: Clean workspace
         shell: bash
-        run: git clean -ffdx
+        run: git clean -ffdx -e e2e/artifacts
+
       - name: Toolchain
         shell: bash
         run: source .github/ci/toolchain.sh
+
       - name: Install
         shell: bash
         run: |
           source .github/ci/toolchain.sh
-          pnpm install --frozen-lockfile --prefer-offline
-      - name: Build site
+          pnpm install --frozen-lockfile --prefer-offline --store-dir "$HOME/tools/pnpm-store"
+
+      - name: Build the site
         shell: bash
         run: |
           source .github/ci/toolchain.sh
           pnpm --filter @ghost-hours/web build
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: apps/web/dist
+          test -f apps/web/dist/index.html
 
-  deploy:
-    name: deploy-site
-    needs: build
-    runs-on: [self-hosted, linux, x64, ghost-hours-worker]
-    timeout-minutes: 5
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      # The `gh-pages` branch is generated content: it is replaced wholesale,
+      # never merged into, and never protected (the ruleset covers `main` only).
+      - name: Publish on gh-pages
+        shell: bash
+        env:
+          GH_PAT: ${{ secrets.AUTOMERGE_PAT || github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/gh-pages-publish
+          git clone -q --depth 1 --branch gh-pages \
+            "https://x-access-token:${GH_PAT}@github.com/${GITHUB_REPOSITORY}.git" /tmp/gh-pages-publish
+          cd /tmp/gh-pages-publish
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name 'README.md' -exec rm -rf {} +
+          cp -r "$GITHUB_WORKSPACE/apps/web/dist/." .
+          touch .nojekyll
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "site inchangé — rien à publier"
+            exit 0
+          fi
+          git commit -q -m "site: build ${GITHUB_SHA::7}"
+          git push -q origin gh-pages
+          echo "publié sur gh-pages depuis ${GITHUB_SHA::7}"
