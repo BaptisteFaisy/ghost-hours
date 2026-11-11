@@ -3,6 +3,7 @@ import { I18nProvider, useI18n } from './i18n/index.ts';
 import { useApp, useDispatch } from './state/store.tsx';
 import { Month } from './screens/Month.tsx';
 import { Week } from './screens/Week.tsx';
+import { Conflicts } from './screens/Conflicts.tsx';
 import { Evidence } from './screens/Evidence.tsx';
 import { Clients } from './screens/Clients.tsx';
 import { Invoice } from './screens/Invoice.tsx';
@@ -17,7 +18,7 @@ import { Settings } from './screens/Settings.tsx';
  * click that makes the app alive: `Load the sample month` (HEU-F-30).
  */
 
-type View = 'month' | 'week' | 'evidence' | 'clients' | 'invoice' | 'settings';
+type View = 'month' | 'week' | 'conflicts' | 'evidence' | 'clients' | 'invoice' | 'settings';
 
 export function App(): JSX.Element {
   return (
@@ -31,6 +32,7 @@ function Shell(): JSX.Element {
   const { t } = useI18n();
   const state = useApp();
   const [view, setView] = useState<View>('month');
+  const openConflicts = state.conflicts.filter((conflict) => !conflict.resolved).length;
 
   return (
     <div className="app-shell">
@@ -51,6 +53,9 @@ function Shell(): JSX.Element {
                 onClick={() => setView(item.id)}
               >
                 {t(item.label)}
+                {item.id === 'conflicts' && openConflicts > 0 && (
+                  <span className="numeric"> ({openConflicts})</span>
+                )}
               </button>
             </li>
           ))}
@@ -69,6 +74,7 @@ function Shell(): JSX.Element {
 const NAV_ITEMS: readonly { id: View; label: MessageLabel }[] = [
   { id: 'month', label: 'nav.month' },
   { id: 'week', label: 'nav.week' },
+  { id: 'conflicts', label: 'nav.conflicts' },
   { id: 'evidence', label: 'nav.evidence' },
   { id: 'clients', label: 'nav.clients' },
   { id: 'invoice', label: 'nav.invoice' },
@@ -78,6 +84,7 @@ const NAV_ITEMS: readonly { id: View; label: MessageLabel }[] = [
 type MessageLabel =
   | 'nav.month'
   | 'nav.week'
+  | 'nav.conflicts'
   | 'nav.evidence'
   | 'nav.clients'
   | 'nav.invoice'
@@ -87,6 +94,8 @@ function Screen(props: { view: View }): JSX.Element {
   switch (props.view) {
     case 'week':
       return <Week />;
+    case 'conflicts':
+      return <Conflicts />;
     case 'evidence':
       return <Evidence />;
     case 'clients':
