@@ -63,7 +63,20 @@ MAX_TOKENS = 8_000
 TEMPERATURE = 0.2
 LABEL_OK = "agent-conflit"
 LABEL_HUMAN = "intervention-humaine"
-COMMENT_PREFIX = "_fireworks · agent de conflit (MiniMax M3.1 Flash)_"
+def _provider_label(kind):
+    """Honest label: the model and host actually configured.
+
+    The variable names are historical (`FIREWORKS_*`) but the provider is
+    chosen by `FIREWORKS_BASE_URL`; a comment announcing a model that was
+    never called would be a lie in the history.
+    """
+    model = os.environ.get("FIREWORKS_MODEL") or MODEL_DEFAULT
+    url = os.environ.get("FIREWORKS_BASE_URL") or API_DEFAULT
+    host = url.split("//", 1)[-1].split("/", 1)[0]
+    return "_fireworks · agent de " + kind + " (" + model + " via " + host + ")_"
+
+
+COMMENT_PREFIX = _provider_label("conflit")
 REFUSED_PREFIXES = (".github/", ".mergify.yml")
 
 
