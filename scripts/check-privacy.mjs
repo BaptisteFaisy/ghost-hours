@@ -54,6 +54,12 @@ const TOOLING_DOMAINS = Object.freeze([
   'pnpm.io',
   'npmjs.com',
   'kiro.dev',
+  // This project's own public hosts and the services its pipeline calls.
+  'github.io',
+  'githubusercontent.com',
+  'devpost.com',
+  'fireworks.ai',
+  'mergify.com',
 ]);
 
 /**
@@ -77,7 +83,18 @@ const TLDS = Object.freeze([
  */
 const COLLIDING_TLDS = Object.freeze(['at', 'name', 'email']);
 
-const CONSERVATIVE_TLDS = Object.freeze(TLDS.filter((tld) => !COLLIDING_TLDS.includes(tld)));
+/**
+ * Suffixes that are file extensions in this repository. `toolchain.sh` and
+ * `notes.ics` are names, not domains — a guard that flags them gets ignored.
+ */
+const FILE_EXTENSIONS = Object.freeze([
+  'sh', 'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'py', 'md', 'mdx', 'json', 'yaml', 'yml',
+  'ics', 'css', 'html', 'txt', 'toml', 'lock', 'svg', 'png', 'map', 'log', 'bak',
+]);
+
+const CONSERVATIVE_TLDS = Object.freeze(
+  TLDS.filter((tld) => !COLLIDING_TLDS.includes(tld) && !FILE_EXTENSIONS.includes(tld)),
+);
 
 const DATA_EXTENSIONS = Object.freeze(['.json', '.ics', '.yaml', '.yml', '.csv', '.html', '.txt']);
 const CODE_EXTENSIONS = Object.freeze(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
@@ -113,6 +130,7 @@ export function isAllowedDomain(domain) {
 /** True when the token ends in a known TLD, so it is worth judging at all. */
 function looksLikeDomain(token, tlds) {
   const tld = token.slice(token.lastIndexOf('.') + 1).toLowerCase();
+  if (FILE_EXTENSIONS.includes(tld)) return false;
   return tlds.includes(tld);
 }
 
