@@ -1,0 +1,25 @@
+# Tasks — `e2e-smoke`
+
+- [ ] 1. Add `@playwright/test` as a root dev dependency and an `e2e` script (`playwright test --config e2e/playwright.config.ts`)
+- [ ] 1.1 Write `e2e/playwright.config.ts`: Chromium only, `baseURL` from `GHOST_HOURS_URL` (default `http://localhost:4173`), video and trace on first retry, output to `e2e/artifacts`
+- [ ] 1.2 Add `e2e/artifacts/` to `.gitignore`
+- [ ] 2. Write `e2e/fixtures.ts`: read `fixtures/sample-month/expected.json`, expose `EXPECTED` and `ORIGIN_UNDER_TEST`
+- [ ] 3. Requirement 1 — sample month in one click
+- [ ] 3.1 Open the page, assert the empty state and the "Load the sample month" button
+- [ ] 3.2 Click it, wait for the counter, assert 104 h / 92 h / 12 h / €780.00 from `EXPECTED`
+- [ ] 4. Requirement 2 — nothing leaves the browser
+- [ ] 4.1 Record every `request` event from `page.goto` onward
+- [ ] 4.2 Fail if any request origin differs from the origin under test; fail on any console error
+- [ ] 5. Requirement 3 — reviewer path
+- [ ] 5.1 Week: at least one proposed block and the 16 November contradiction visible
+- [ ] 5.2 Confirm a block, assert the confirmed hours of the month counter increased
+- [ ] 5.3 Invoice for Acme: assert "Draft" is shown and no invoice number pattern (`/\b\d{4}\s*\/\s*\d+/`, `#`, `n°`) appears
+- [ ] 5.4 Click the CSV export, assert a non-empty download and no extra network request
+- [ ] 6. Requirement 4 — the workflow
+- [ ] 6.1 `.github/workflows/e2e.yml`: `workflow_dispatch` + `workflow_run` after `Deploy (GitHub Pages)`, `timeout-minutes: 5`, self-hosted runner label, browser from `PLAYWRIGHT_BROWSERS_PATH` with a fallback to the system Chrome
+- [ ] 6.2 Upload `e2e/artifacts` (screenshots, video, trace) as a build artifact
+- [ ] 6.3 Check `python3 .github/ci-budget/check_timeouts.py` stays green
+- [ ] 7. Documentation
+- [ ] 7.1 `e2e/README.md`: run locally, record the submission video, what each test proves
+- [ ] 7.2 One line in `docs/CI.md` and one in `docs/ACCEPTANCE.md` pointing at the suite
+- [ ] 8. Run it once against the public URL and paste the result in `KIRO_JOURNAL.md`
