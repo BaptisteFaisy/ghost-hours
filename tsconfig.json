@@ -5,6 +5,7 @@
     "packages/*/src/**/*.tsx",
     "apps/*/src/**/*.ts",
     "apps/*/src/**/*.tsx",
+    "e2e/**/*.ts",
     "fixtures/*/index.ts",
     "fixtures/*/*.test.ts",
     "fixtures/*/*.d.ts",

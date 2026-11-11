@@ -176,3 +176,13 @@ The form's eighth question asks for one honest difficulty. These are real, from 
 - [ ] Video script (D.16), under 3 minutes, four beats.
 - [ ] Blog post and social post for the bonuses.
 - [ ] Fill every `TODO(measure)` in this file from a real Kiro session.
+
+### End-to-end smoke suite implemented and run (browser, 4 tests)
+
+The `e2e-smoke` spec was implemented and run: `pnpm e2e` against a local preview of the built app,
+**4 passed in 8.3 s** (Chromium, 1440×900). Requirement 2 is the one worth quoting — across all six
+screens the browser made **no request to a foreign origin and logged no console error**. The suite
+runs after each deploy and on demand, never on a pull request, so the five-minute verdict stands.
+The 23 tasks of `.kiro/specs/e2e-smoke/tasks.md` are ticked from that run. The session inside Kiro
+itself (steering questions, hook trigger counts, spec against vibe coding) is still
+`TODO(measure)` — the steps are written in `docs/KIRO-SESSION.md`.
