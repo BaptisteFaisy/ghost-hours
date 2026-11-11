@@ -23,7 +23,7 @@ describe('i18n parity', () => {
   });
 
   it('interpolates the same placeholders in both languages', () => {
-    const place = (value: string): string[] => [...value.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+    const place = (value: string): string[] => [...value.matchAll(/\{(\w+)\}/g)].map((m) => m[1] ?? '').sort();
     for (const key of keys) {
       if (place(en[key]).length === 0) continue;
       expect(place(fr[key]), key).toEqual(place(en[key]));
