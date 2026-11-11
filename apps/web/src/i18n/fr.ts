@@ -249,4 +249,46 @@ export const fr: Dictionary = {
   'calibration.suggestion': 'Vous avez retenu une amorce médiane de {minutes} sur {samples} corrections.',
   'calibration.apply': 'L’utiliser comme amorce par défaut',
   'calibration.neverAuto': 'Rien n’est appliqué sans votre clic.',
+  // --- contradictions à trancher (idée P-06 / A-09) ---
+  'nav.conflicts': 'Conflits',
+  'conflicts.title': 'Contradictions à trancher',
+  'conflicts.empty': 'Aucune contradiction : deux clients ne réclament pas les mêmes minutes.',
+  'conflicts.explainer':
+    'Deux clients réclament les mêmes minutes. L’outil ne choisit pas à votre place : il montre les deux côtés et attend.',
+  'conflicts.keep': 'Garder {client}',
+  'conflicts.split': 'Partager les minutes',
+  'conflicts.splitExplainer':
+    'Chacun garde la moitié du chevauchement la plus proche de lui. Les deux blocs redeviennent proposés, et la décision survit à la reconstitution suivante.',
+  'conflicts.evidence': 'Preuves en contradiction',
+  'conflicts.position': '{index} sur {total}',
+  'conflicts.settled': 'Tranché',
+
+  // --- pourquoi le bloc a ces bornes (idée P-05) ---
+  'block.reason': 'Pourquoi ces bornes',
+  'reason.checkout': 'Commence à un changement de branche de {repo}, {minutes} min avant la première preuve.',
+  'reason.assumed': 'Suppose une amorce de {minutes} min avant la première preuve.',
+  'reason.boundedBy.previous-proof': 'Raccourcie par la preuve précédente d’un autre client.',
+  'reason.boundedBy.workday-start': 'Raccourcie par le début de la journée de travail.',
+  'reason.boundedBy.none': 'Rien ne l’a raccourcie.',
+  'reason.resume': 'Reprend après une pause de {minutes} min : rien n’est supposé avant.',
+  'reason.meeting': 'Bornes exactes de l’événement d’agenda.',
+  'reason.manual': 'Déclaré par vous, non prouvé.',
+  'reason.merged': 'Fusionné avec {count} blocs du même client.',
+  'reason.trimmed': 'Rogné par une réunion de {client}.',
+  'reason.conflict': 'En contradiction avec {client}.',
+
+  // --- réglages : pauses, automatisation, journal (idées A-01, A-02, C-06) ---
+  'settings.breakMax': 'Pause qui coupe la journée (minutes)',
+  'settings.ignoreAutomation': 'Mettre de côté les commits des robots et des files de merge',
+  'settings.ignoredTitle': 'Mis de côté comme automatisation',
+  'settings.ignoredCount': '{count} commits mis de côté — listés, jamais cachés.',
+  'settings.ignoredNone': 'Rien n’a été mis de côté.',
+  'audit.title': 'Journal des décisions',
+  'audit.explainer':
+    'Chaque décision est écrite ici, dans ce navigateur, avec une empreinte chaînée à la précédente. Rien n’est jamais envoyé.',
+  'audit.export': 'Exporter le journal (CSV)',
+  'audit.exportJson': 'Exporter le journal (JSON)',
+  'audit.verifyOk': 'La chaîne est intacte ({count} entrées).',
+  'audit.verifyBroken': 'La chaîne se brise à l’entrée {index} : le journal a été altéré.',
+  'audit.empty': 'Aucune décision pour l’instant.',
 };

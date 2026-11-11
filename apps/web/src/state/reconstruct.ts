@@ -18,6 +18,8 @@ export interface ReconstructionOutcome {
   readonly evidence: readonly Evidence[];
   /** Lead-in calibration proposal (HEU-F-17): never applied on its own. */
   readonly calibration: Calibration | null;
+  /** Automation commits set aside: listed, never hidden. */
+  readonly ignored: readonly Evidence[];
 }
 
 function dedupeById(items: readonly Evidence[]): readonly Evidence[] {
@@ -84,6 +86,7 @@ export function reconstruct(
     orphans,
     evidence: dedupeById([...mapping.mapped, ...orphans]),
     calibration: result.calibration,
+    ignored: result.ignoredEvidence ?? [],
   };
 }
 

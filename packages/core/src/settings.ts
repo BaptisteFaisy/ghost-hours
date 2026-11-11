@@ -7,6 +7,10 @@ import type { Minutes, ReconstructionSettings, RoundingRule } from './types.ts';
  */
 export const DEFAULT_SETTINGS: ReconstructionSettings = {
   gapMaxMinutes: 90,
+  // One hour: a shorter hole inside a working day is reading, thinking or a
+  // call — still work. A longer one is lunch, and lunch is not billable.
+  breakMaxMinutes: 60,
+  ignoreAutomation: true,
   leadInDefaultMinutes: 30,
   leadInMaxMinutes: 120,
   minSessionMinutes: 15,
@@ -55,11 +59,14 @@ export function resolveSettings(patch: Partial<ReconstructionSettings>): Reconst
   return {
     ...merged,
     gapMaxMinutes: positive(merged.gapMaxMinutes, DEFAULT_SETTINGS.gapMaxMinutes),
+    ignoreAutomation: merged.ignoreAutomation !== false,
     leadInDefaultMinutes: positive(merged.leadInDefaultMinutes, DEFAULT_SETTINGS.leadInDefaultMinutes),
     leadInMaxMinutes: positive(merged.leadInMaxMinutes, DEFAULT_SETTINGS.leadInMaxMinutes),
     minSessionMinutes: positive(merged.minSessionMinutes, DEFAULT_SETTINGS.minSessionMinutes),
     tailMinutes: merged.tailMinutes >= 0 ? merged.tailMinutes : DEFAULT_SETTINGS.tailMinutes,
     workdayStart: isClock(merged.workdayStart) ? merged.workdayStart : DEFAULT_SETTINGS.workdayStart,
+    // A break must stay shorter than a gap, or the two thresholds say the same thing.
+    ...clampBreak(merged),
     timeZone: merged.timeZone.length > 0 ? merged.timeZone : DEFAULT_SETTINGS.timeZone,
   };
 }
@@ -70,6 +77,13 @@ function stripUndefined<T extends object>(patch: Partial<T>): Partial<T> {
     if (value !== undefined) out[key] = value;
   }
   return out as Partial<T>;
+}
+
+/** `breakMaxMinutes` must stay strictly below `gapMaxMinutes`. */
+function clampBreak(settings: ReconstructionSettings): { breakMaxMinutes: number } {
+  const gap = settings.gapMaxMinutes;
+  const brk = settings.breakMaxMinutes;
+  return { breakMaxMinutes: brk < gap ? brk : Math.max(1, Math.floor(gap / 2)) };
 }
 
 function positive(value: number, fallback: number): number {

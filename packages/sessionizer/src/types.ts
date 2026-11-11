@@ -1,4 +1,4 @@
-import type { Evidence, Instant, Minutes } from '@ghost-hours/core';
+import type { BlockReason, Evidence, Instant, Minutes } from '@ghost-hours/core';
 
 /**
  * Internal vocabulary of the reconstruction (spec D.5).
@@ -22,6 +22,12 @@ export interface Session {
   readonly end: Instant;
   readonly assumedLeadInMinutes: Minutes;
   readonly points: readonly PointProof[];
+  /** How the start was decided, so the block can explain itself. */
+  readonly startKind: 'checkout' | 'assumed' | 'resume';
+  /** What bounds an assumed lead-in, when there is one. */
+  readonly boundedBy: 'previous-proof' | 'workday-start' | 'none';
+  /** Length of the pause before this session, when it follows a break. */
+  readonly pauseMinutes: Minutes;
 }
 
 /** A block before confidence and statuses are settled. */
@@ -32,6 +38,7 @@ export interface BlockDraft {
   readonly origin: 'git-session' | 'meeting' | 'merged' | 'manual';
   readonly evidenceIds: readonly string[];
   readonly assumedLeadInMinutes: Minutes;
+  readonly reason?: BlockReason;
   /** Set when a contradiction touched this draft (HEU-F-14). */
   readonly conflicted?: boolean;
   /** Draft keys that were merged into this one, for conflict bookkeeping. */

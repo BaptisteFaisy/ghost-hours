@@ -10,6 +10,7 @@ import type {
   SupportedLocale,
 } from '@ghost-hours/core';
 import type { Calibration, LeadInCorrection } from '@ghost-hours/sessionizer';
+import type { AuditEntry } from './audit.ts';
 import type { NoteFile } from '@ghost-hours/notes';
 import type { Dataset } from '@ghost-hours/core';
 
@@ -44,6 +45,10 @@ export interface AppState {
   readonly importReport: readonly string[];
   /** Lead-in calibration proposal (HEU-F-17); null until there are ten corrections. */
   readonly calibration: Calibration | null;
+  /** Local, chained audit trail of every decision (never leaves the browser). */
+  readonly audit: readonly AuditEntry[];
+  /** Commits set aside as automation: shown, never silently dropped. */
+  readonly ignoredEvidence: readonly Evidence[];
 }
 
 export type AppAction =
@@ -59,6 +64,7 @@ export type AppAction =
   | { type: 'splitBlock'; blockId: string; at: Instant }
   | { type: 'changeClient'; blockId: string; clientId: string; projectId: string | null }
   | { type: 'resolveConflict'; conflictId: string; keepBlockId: string }
+  | { type: 'splitConflict'; conflictId: string }
   | { type: 'confirmDay'; dayKey: string }
   | { type: 'confirmWeek'; weekStart: Instant }
   | { type: 'upsertClient'; client: Client }
@@ -75,6 +81,7 @@ export type AppAction =
   | { type: 'selectBlock'; blockId: string | null }
   | { type: 'markPeriodInvoiced'; clientId: string; start: Instant; end: Instant }
   | { type: 'importDataset'; dataset: Dataset }
+  | { type: 'restoreAudit'; entries: readonly AuditEntry[] }
   | { type: 'resetAll' };
 
 /**
@@ -108,5 +115,7 @@ export function initialState(settings: ReconstructionSettings): AppState {
     annexDetail: 'durations',
     importReport: [],
     calibration: null,
+    audit: [],
+    ignoredEvidence: [],
   };
 }

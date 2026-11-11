@@ -250,6 +250,48 @@ export const en = {
   'calibration.suggestion': 'You kept a median lead-in of {minutes} over {samples} corrections.',
   'calibration.apply': 'Use it as the default lead-in',
   'calibration.neverAuto': 'Nothing is applied without you clicking.',
+  // --- contradictions to settle (idea P-06 / A-09) ---
+  'nav.conflicts': 'Conflicts',
+  'conflicts.title': 'Contradictions to settle',
+  'conflicts.empty': 'No contradiction: no two clients claim the same minutes.',
+  'conflicts.explainer':
+    'Two clients claim the same minutes. The tool does not choose for you: it shows both sides and waits.',
+  'conflicts.keep': 'Keep {client}',
+  'conflicts.split': 'Share the minutes',
+  'conflicts.splitExplainer':
+    'Each side keeps the half of the overlap closest to it. Both blocks come back as proposed, and the decision survives the next reconstruction.',
+  'conflicts.evidence': 'Evidence in conflict',
+  'conflicts.position': '{index} of {total}',
+  'conflicts.settled': 'Settled',
+
+  // --- why a block has these bounds (idea P-05) ---
+  'block.reason': 'Why these bounds',
+  'reason.checkout': 'Starts at a branch switch in {repo}, {minutes} min before the first proof.',
+  'reason.assumed': 'Assumes a {minutes} min lead-in before the first proof.',
+  'reason.boundedBy.previous-proof': 'Shortened by the previous proof of another client.',
+  'reason.boundedBy.workday-start': 'Shortened by the workday start.',
+  'reason.boundedBy.none': 'Nothing shortened it.',
+  'reason.resume': 'Resumes after a {minutes} min pause: nothing is assumed before it.',
+  'reason.meeting': 'Exact bounds of the calendar entry.',
+  'reason.manual': 'Declared by you, not proven.',
+  'reason.merged': 'Merged with {count} blocks of the same client.',
+  'reason.trimmed': 'Trimmed by a meeting of {client}.',
+  'reason.conflict': 'In conflict with {client}.',
+
+  // --- settings: pauses, automation, audit (ideas A-01, A-02, C-06) ---
+  'settings.breakMax': 'Pause that splits a day (minutes)',
+  'settings.ignoreAutomation': 'Set aside commits from bots and merge queues',
+  'settings.ignoredTitle': 'Set aside as automation',
+  'settings.ignoredCount': '{count} commits set aside — listed, never hidden.',
+  'settings.ignoredNone': 'Nothing was set aside.',
+  'audit.title': 'Decision log',
+  'audit.explainer':
+    'Every decision is written here, in this browser, with a fingerprint chained to the previous one. Nothing is ever sent anywhere.',
+  'audit.export': 'Export the log (CSV)',
+  'audit.exportJson': 'Export the log (JSON)',
+  'audit.verifyOk': 'The chain is intact ({count} entries).',
+  'audit.verifyBroken': 'The chain breaks at entry {index}: the log was altered.',
+  'audit.empty': 'No decision yet.',
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -22,6 +22,7 @@ import {
   type TrimResult,
 } from './blocks.ts';
 import { buildSessions, toPoint } from './sessions.ts';
+import { partitionAutomation } from './noise.ts';
 import type { BlockDraft, PointProof } from './types.ts';
 import { calibrate } from './calibration.ts';
 import type { SessionizeInput, SessionizeResult } from './public-types.ts';
@@ -48,6 +49,7 @@ import type { SessionizeInput, SessionizeResult } from './public-types.ts';
  */
 
 interface Pool {
+  readonly ignored: readonly Evidence[];
   readonly mapped: readonly Evidence[];
   readonly orphans: readonly Evidence[];
   readonly points: readonly PointProof[];
@@ -63,11 +65,16 @@ function partition(input: SessionizeInput): { pool: Pool; unique: readonly Evide
   );
   const seen = new Set<string>();
   const unique = input.evidence.filter((item) => (seen.has(item.id) ? false : (seen.add(item.id), true)));
-  const kept = unique.filter((item) => !frozen.has(item.id));
+  const unfrozen = unique.filter((item) => !frozen.has(item.id));
+  // Automation is set aside before anything is counted, and reported (never
+  // hidden): a bot's commits are not the freelancer's hours.
+  const split = input.settings.ignoreAutomation === false ? { kept: unfrozen, ignored: [] } : partitionAutomation(unfrozen);
+  const kept = split.kept;
   const mapped = kept.filter((item) => item.clientId !== null);
   return {
     unique,
     pool: {
+      ignored: split.ignored,
       mapped,
       orphans: kept.filter((item) => item.clientId === null),
       points: mapped.map(toPoint).filter((point): point is PointProof => point !== null),
@@ -82,6 +89,7 @@ export interface Reconstruction {
   readonly blocks: readonly Block[];
   readonly conflicts: readonly Conflict[];
   readonly leftovers: readonly Evidence[];
+  readonly ignored: readonly Evidence[];
 }
 
 /** Steps 3-9: sessions, meetings, contradictions, trimming, merging, grading. */
@@ -125,6 +133,7 @@ function reconstruct(
     blocks: finalise({ drafts: settled.drafts, proofByDraft, conflictBlockKeys: conflictKeys, adjustedBlocks }),
     conflicts: buildConflicts(contradictions.pairs, constituentIndex(settled.drafts)),
     leftovers: [...built.tooShort.map((point) => point.evidence), ...trimmed.leftover, ...settled.leftover],
+    ignored: pool.ignored,
   };
 }
 
@@ -143,6 +152,7 @@ export function sessionize(input: SessionizeInput): SessionizeResult {
     blocks,
     conflicts: outcome.conflicts,
     orphanEvidence: orphans,
+    ignoredEvidence: outcome.ignored,
     settings: input.settings,
     calibration: calibrate(input.corrections ?? [], input.settings),
   };

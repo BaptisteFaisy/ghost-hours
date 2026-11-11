@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveSettings } from '@ghost-hours/core';
+import type { Evidence } from '@ghost-hours/core';
 import { sessionize } from './algorithm.ts';
 import {
   ACME,
@@ -46,6 +47,9 @@ describe('sessionize — sessions (D.5 steps 2-5)', () => {
     expect(block?.assumedLeadInMinutes).toBe(10);
   });
 
+});
+
+describe('sessionize — starts (D.5 step 4)', () => {
   it('uses a checkout of the same repository as the real start', () => {
     const evidence = [checkout('k1', at(3, 8, 50)), commit('c1', at(3, 9)), commit('c2', at(3, 10))];
     const block = sessionize({ ...base, evidence }).blocks[0];
@@ -56,6 +60,21 @@ describe('sessionize — sessions (D.5 steps 2-5)', () => {
   it('ignores a checkout of another repository', () => {
     const evidence = [checkout('k1', at(3, 8, 50), 'acme', 'other-repo'), commit('c1', at(3, 9))];
     expect(sessionize({ ...base, evidence }).blocks[0]?.start).toBe(at(3, 8, 30));
+  });
+
+  it('says which constraint shortened the lead-in', () => {
+    // Acme commits at 09:00, then Northwind at 09:10: the lead-in of the
+    // second client is squeezed to nothing by the previous proof.
+    const evidence = [
+      commit('c1', at(3, 9)),
+      commit('n1', at(3, 9, 10), 'northwind', 'northwind-portal'),
+      commit('n2', at(3, 9, 40), 'northwind', 'northwind-portal'),
+    ];
+    const northwind = sessionize({ clients: CLIENTS, settings, evidence }).blocks.find(
+      (block) => block.clientId === 'northwind',
+    );
+    expect(northwind?.assumedLeadInMinutes).toBe(10);
+    expect(northwind?.reason).toEqual({ kind: 'assumed', minutes: 10, boundedBy: 'previous-proof' });
   });
 
   it('never starts before the previous proof of another client', () => {
@@ -102,7 +121,7 @@ describe('sessionize — meetings, overlaps, conflicts (D.5 steps 6-8)', () => {
 
   it('raises a conflict when a proof falls inside another client meeting', () => {
     const evidence = [
-      commit('c1', at(3, 9)),
+      commit('c1', at(3, 10)),
       commit('c2', at(3, 10, 30)),
       meeting('m1', at(3, 10), at(3, 11), 'northwind'),
     ];
@@ -193,5 +212,106 @@ describe('sessionize — declared entries and confidence', () => {
     expect(new Set(result.blocks.map((block) => block.clientId))).toEqual(new Set(['acme', 'northwind']));
     expect(ACME.id).toBe('acme');
     expect(NORTHWIND.id).toBe('northwind');
+  });
+});
+
+describe('sessionize — pauses, automation et raisons (idées A-01, A-02, P-05)', () => {
+  const day = { timeZone: TZ, gapMaxMinutes: 90, breakMaxMinutes: 45, ignoreAutomation: true };
+
+  it('cuts a lunch break without inventing a lead-in after it', () => {
+    const settings = resolveSettings(day);
+    const evidence = [
+      commit('c1', at(3, 9)),
+      commit('c2', at(3, 9, 30)),
+      commit('c3', at(3, 11)),
+      commit('c4', at(3, 11, 30)),
+    ];
+    const blocks = sessionize({ clients: CLIENTS, settings, evidence }).blocks;
+    // 09:30 -> 11:00 is a 90 minute hole: not over gapMax, but over breakMax.
+    expect(blocks).toHaveLength(2);
+    const resumed = blocks[1];
+    expect(resumed?.start).toBe(at(3, 11));
+    expect(resumed?.assumedLeadInMinutes).toBe(0);
+    expect(resumed?.reason).toEqual({ kind: 'resume', pauseMinutes: 90 });
+  });
+
+  it('still assumes a lead-in when the hole is a new session, not a pause', () => {
+    const settings = resolveSettings(day);
+    const evidence = [commit('c1', at(3, 9)), commit('c2', at(3, 14))];
+    const blocks = sessionize({ clients: CLIENTS, settings, evidence }).blocks;
+    expect(blocks).toHaveLength(2);
+    expect(blocks[1]?.assumedLeadInMinutes).toBe(30);
+    // The full 30 minutes were available: nothing shortened them.
+    expect(blocks[1]?.reason).toEqual({ kind: 'assumed', minutes: 30, boundedBy: 'none' });
+  });
+
+  it('keeps a pause inside the session when it is shorter than breakMax', () => {
+    const settings = resolveSettings({ ...day, breakMaxMinutes: 45 });
+    const evidence = [commit('c1', at(3, 9)), commit('c2', at(3, 9, 40))];
+    expect(sessionize({ clients: CLIENTS, settings, evidence }).blocks).toHaveLength(1);
+  });
+
+});
+
+describe('sessionize — automation set aside, listed not hidden', () => {
+  const day = { timeZone: TZ, gapMaxMinutes: 90, breakMaxMinutes: 45, ignoreAutomation: true };
+
+  it('sets automation commits aside and lists them', () => {
+    const settings = resolveSettings(day);
+    const bot: Evidence = {
+      id: 'git:acme-api:bot1',
+      source: 'git',
+      kind: 'commit',
+      clientId: 'acme',
+      at: at(3, 10),
+      repo: 'acme-api',
+      authorEmail: 'dependabot[bot]@users.noreply.github.com',
+      summary: 'build(deps): bump zod from 3.24.1 to 3.24.2',
+    };
+    const result = sessionize({
+      clients: CLIENTS,
+      settings,
+      evidence: [commit('c1', at(3, 9)), bot, commit('c2', at(3, 9, 30))],
+    });
+    expect(result.ignoredEvidence?.map((item) => item.id)).toEqual(['git:acme-api:bot1']);
+    expect(result.blocks.flatMap((block) => block.evidenceIds)).not.toContain('git:acme-api:bot1');
+  });
+
+});
+
+describe('sessionize — automation opt-out and block reasons', () => {
+  const day = { timeZone: TZ, gapMaxMinutes: 90, breakMaxMinutes: 45, ignoreAutomation: true };
+
+  it('counts automation when the user asks for it', () => {
+    const settings = resolveSettings({ ...day, ignoreAutomation: false });
+    const bot: Evidence = {
+      id: 'git:acme-api:bot2',
+      source: 'git',
+      kind: 'commit',
+      clientId: 'acme',
+      at: at(3, 9, 15),
+      repo: 'acme-api',
+      authorEmail: 'mergify[bot]@users.noreply.github.com',
+      summary: 'Merge pull request #12 from dependabot/npm/zod',
+    };
+    const result = sessionize({ clients: CLIENTS, settings, evidence: [commit('c1', at(3, 9)), bot] });
+    expect(result.ignoredEvidence).toHaveLength(0);
+    expect(result.blocks[0]?.evidenceIds).toContain('git:acme-api:bot2');
+  });
+
+  it('explains every kind of block', () => {
+    const settings = resolveSettings(day);
+    const evidence = [
+      checkout('k1', at(3, 8, 50)),
+      commit('c1', at(3, 9)),
+      commit('c2', at(3, 9, 30)),
+      meeting('m1', at(3, 14), at(3, 14, 30)),
+      manual('h1', at(3, 16), at(3, 17)),
+    ];
+    const blocks = sessionize({ clients: CLIENTS, settings, evidence }).blocks;
+    const reasons = blocks.map((block) => block.reason?.kind);
+    expect(reasons).toContain('checkout');
+    expect(reasons).toContain('meeting');
+    expect(reasons).toContain('manual');
   });
 });

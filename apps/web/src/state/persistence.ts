@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { evidenceItemSchema, normalizeItem, parseDataset } from '@ghost-hours/core';
 import type { Dataset, Evidence } from '@ghost-hours/core';
+import type { AuditEntry } from './audit.ts';
 import { err, ok } from '@ghost-hours/core';
 import type { ParseResult } from '@ghost-hours/core';
 
@@ -29,6 +30,16 @@ const correctionsSchema = z.object({
   acceptedMinutes: z.number(),
 });
 
+const auditEntrySchema = z.object({
+  id: z.string(),
+  at: z.number().int(),
+  action: z.string(),
+  blockId: z.string().optional(),
+  clientId: z.string().optional(),
+  detail: z.string().optional(),
+  fingerprint: z.string(),
+});
+
 const envelopeSchema = z.object({
   version: z.literal(PERSISTED_VERSION),
   dataset: z.unknown(),
@@ -39,6 +50,8 @@ const envelopeSchema = z.object({
   annexDetail: z.enum(['durations', 'with-evidence']),
   activeMonth: z.object({ year: z.number().int(), month: z.number().int() }),
   activeWeekStart: z.number().int().nullable(),
+  // Optional: a state saved before the audit trail existed still loads.
+  audit: z.array(auditEntrySchema).optional(),
 });
 
 export interface PersistedState {
@@ -50,6 +63,7 @@ export interface PersistedState {
   readonly annexDetail: 'durations' | 'with-evidence';
   readonly activeMonth: { readonly year: number; readonly month: number };
   readonly activeWeekStart: number | null;
+  readonly audit?: readonly AuditEntry[];
 }
 
 function indexedDbAvailable(): boolean {
