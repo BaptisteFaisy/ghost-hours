@@ -1,5 +1,6 @@
 import { useI18n } from '../i18n/index.ts';
 import { useApp, useDispatch, eraseEverything } from '../state/store.tsx';
+import { ImportPanel } from '../components/ImportPanel.tsx';
 import type { ReconstructionSettings } from '@ghost-hours/core';
 
 /**
@@ -17,6 +18,8 @@ export function Settings(): JSX.Element {
       <p>{t('settings.privacy')}</p>
       <LanguageField />
       <ReconstructionFields />
+      <CalibrationPanel />
+      <ImportPanel />
       <section aria-label={t('settings.data')}>
         <h3>{t('settings.data')}</h3>
         <button type="button" onClick={() => dispatch({ type: 'loadSampleMonth' })}>
@@ -33,6 +36,48 @@ export function Settings(): JSX.Element {
         </button>
       </section>
       <p>{`${t('settings.timeZone')}: ${state.settings.timeZone}`}</p>
+    </section>
+  );
+}
+
+/**
+ * The lead-in calibration (HEU-F-17): after ten corrections the median of what
+ * the user actually kept is offered as the new default. Offered, never applied:
+ * a tool that changes its own assumptions silently is a tool that inflates.
+ */
+function CalibrationPanel(): JSX.Element {
+  const { t, formatDuration } = useI18n();
+  const state = useApp();
+  const dispatch = useDispatch();
+  const calibration = state.calibration;
+  const samples = calibration?.samples ?? 0;
+  return (
+    <section aria-label={t('calibration.title')}>
+      <h3>{t('calibration.title')}</h3>
+      {calibration === null || calibration.suggestedLeadInMinutes === null ? (
+        <p>{t('calibration.notEnough', { samples })}</p>
+      ) : (
+        <>
+          <p>
+            {t('calibration.suggestion', {
+              minutes: formatDuration(calibration.suggestedLeadInMinutes),
+              samples: calibration.samples,
+            })}
+          </p>
+          <button
+            type="button"
+            onClick={() =>
+              dispatch({
+                type: 'setSettings',
+                patch: { leadInDefaultMinutes: calibration.suggestedLeadInMinutes ?? 30 },
+              })
+            }
+          >
+            {t('calibration.apply')}
+          </button>
+        </>
+      )}
+      <p>{t('calibration.neverAuto')}</p>
     </section>
   );
 }

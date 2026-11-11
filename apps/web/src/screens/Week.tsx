@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Evidence, Instant } from '@ghost-hours/core';
 import { addDaysInZone, monthRangeInZone, weekStartInZone } from '@ghost-hours/core';
 import { useApp, useDispatch } from '../state/store.tsx';
@@ -14,6 +14,7 @@ import { useI18n } from '../i18n/index.ts';
 import { ConflictList } from '../components/ConflictList.tsx';
 import { WeekGrid } from '../components/WeekGrid.tsx';
 import { WeekTable } from '../components/WeekTable.tsx';
+import { ManualBlockForm } from '../components/ManualBlockForm.tsx';
 
 /**
  * The week screen (D.11): the grid of blocks, the gestures that settle them,
@@ -44,6 +45,7 @@ export function Week(): JSX.Element {
     <section className="card week-screen" aria-label={t('week.title')}>
       <h2>{t('week.title')}</h2>
       <WeekToolbar weekStart={weekStart} days={days} />
+      <ManualEntry days={days} />
       <DayButtons days={days} />
       <div className="week-views">
         <WeekGrid days={days} blocks={blocks} />
@@ -72,6 +74,21 @@ function defaultWeekStart(year: number, month: number, timeZone: string): Instan
 interface WeekToolbarProps {
   readonly weekStart: Instant;
   readonly days: readonly { start: number }[];
+}
+
+/** The gesture that declares work no evidence shows (HEU-F-05). */
+function ManualEntry(props: { days: readonly { dayKey: string }[] }): JSX.Element {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const dayKey = props.days[0]?.dayKey ?? '';
+  return (
+    <>
+      <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        {t('week.addManual')}
+      </button>
+      {open && <ManualBlockForm dayKey={dayKey} onDone={() => setOpen(false)} />}
+    </>
+  );
 }
 
 function WeekToolbar(props: WeekToolbarProps): JSX.Element {

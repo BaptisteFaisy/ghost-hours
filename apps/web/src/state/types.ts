@@ -9,7 +9,7 @@ import type {
   ReconstructionSettings,
   SupportedLocale,
 } from '@ghost-hours/core';
-import type { LeadInCorrection } from '@ghost-hours/sessionizer';
+import type { Calibration, LeadInCorrection } from '@ghost-hours/sessionizer';
 import type { NoteFile } from '@ghost-hours/notes';
 import type { Dataset } from '@ghost-hours/core';
 
@@ -42,6 +42,8 @@ export interface AppState {
   readonly annexDetail: AnnexDetail;
   /** What was read, what was skipped. */
   readonly importReport: readonly string[];
+  /** Lead-in calibration proposal (HEU-F-17); null until there are ten corrections. */
+  readonly calibration: Calibration | null;
 }
 
 export type AppAction =
@@ -105,5 +107,6 @@ export function initialState(settings: ReconstructionSettings): AppState {
     freeTextNotes: [],
     annexDetail: 'durations',
     importReport: [],
+    calibration: null,
   };
 }

@@ -1,6 +1,6 @@
 import { applyRules } from '@ghost-hours/mapping';
 import { sessionize } from '@ghost-hours/sessionizer';
-import type { LeadInCorrection } from '@ghost-hours/sessionizer';
+import type { Calibration, LeadInCorrection } from '@ghost-hours/sessionizer';
 import type { Block, Client, Conflict, Evidence, ReconstructionSettings } from '@ghost-hours/core';
 
 /**
@@ -16,6 +16,8 @@ export interface ReconstructionOutcome {
   readonly conflicts: readonly Conflict[];
   readonly orphans: readonly Evidence[];
   readonly evidence: readonly Evidence[];
+  /** Lead-in calibration proposal (HEU-F-17): never applied on its own. */
+  readonly calibration: Calibration | null;
 }
 
 function dedupeById(items: readonly Evidence[]): readonly Evidence[] {
@@ -81,6 +83,7 @@ export function reconstruct(
     conflicts: result.conflicts,
     orphans,
     evidence: dedupeById([...mapping.mapped, ...orphans]),
+    calibration: result.calibration,
   };
 }
 

@@ -90,3 +90,43 @@ describe('Week', () => {
     });
   });
 });
+
+describe('Week — declaring a block by hand (HEU-F-05)', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    stubBrowserStorage();
+    clearBrowserStorage();
+  });
+
+  it('adds a declared block and says how long it is', async () => {
+    renderWeek();
+    await grid();
+    await userEvent.click(screen.getByRole('button', { name: 'Add a block' }));
+    const form = screen.getByRole('region', { name: 'Add a block by hand' });
+    await userEvent.click(within(form).getByRole('button', { name: 'Add the block' }));
+    await waitFor(() => {
+      expect(within(form).getByText(/Block added: 1h/)).toBeDefined();
+    });
+  });
+
+  it('refuses an end that comes before the start', async () => {
+    renderWeek();
+    await grid();
+    await userEvent.click(screen.getByRole('button', { name: 'Add a block' }));
+    const form = screen.getByRole('region', { name: 'Add a block by hand' });
+    await userEvent.clear(within(form).getByLabelText('End'));
+    await userEvent.type(within(form).getByLabelText('End'), '08:00');
+    const add = within(form).getByRole('button', { name: 'Add the block' }) as HTMLButtonElement;
+    expect(add.disabled).toBe(true);
+    expect(within(form).getByRole('alert').textContent ?? '').toContain('after the start');
+  });
+
+  it('closes without adding anything when cancelled', async () => {
+    renderWeek();
+    await grid();
+    await userEvent.click(screen.getByRole('button', { name: 'Add a block' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('region', { name: 'Add a block by hand' })).toBeNull();
+  });
+});
