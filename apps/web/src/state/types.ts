@@ -10,6 +10,7 @@ import type {
   SupportedLocale,
 } from '@ghost-hours/core';
 import type { Calibration, LeadInCorrection } from '@ghost-hours/sessionizer';
+import type { ReconstructionOutcome } from './reconstruct.ts';
 import type { AuditEntry } from './audit.ts';
 import type { NoteFile } from '@ghost-hours/notes';
 import type { Dataset } from '@ghost-hours/core';
@@ -21,6 +22,15 @@ import type { Dataset } from '@ghost-hours/core';
  * clients and their rules, the reconstructed blocks and the review decisions
  * the user made. Nothing else is stored anywhere but the browser.
  */
+/** A reconstruction to run off the main thread (idea R-01). */
+export interface PendingReconstruction {
+  readonly evidence: readonly Evidence[];
+  readonly clients: readonly Client[];
+  readonly settings: ReconstructionSettings;
+  readonly previousBlocks: readonly Block[];
+  readonly corrections: readonly LeadInCorrection[];
+}
+
 export interface AppState {
   readonly status: 'empty' | 'ready';
   readonly locale: SupportedLocale;
@@ -47,6 +57,10 @@ export interface AppState {
   readonly calibration: Calibration | null;
   /** Local, chained audit trail of every decision (never leaves the browser). */
   readonly audit: readonly AuditEntry[];
+  /** True while a bulk reconstruction runs off the main thread. */
+  readonly busy: boolean;
+  /** The reconstruction to run in a worker; null when the state is settled. */
+  readonly pending: PendingReconstruction | null;
   /** Commits set aside as automation: shown, never silently dropped. */
   readonly ignoredEvidence: readonly Evidence[];
 }
@@ -67,6 +81,7 @@ export type AppAction =
   | { type: 'splitConflict'; conflictId: string }
   | { type: 'confirmDay'; dayKey: string }
   | { type: 'confirmWeek'; weekStart: Instant }
+  | { type: 'confirmSolidBlocks'; threshold: number }
   | { type: 'upsertClient'; client: Client }
   | { type: 'upsertRule'; rule: MappingRule }
   | { type: 'removeRule'; ruleId: string }
@@ -82,6 +97,7 @@ export type AppAction =
   | { type: 'markPeriodInvoiced'; clientId: string; start: Instant; end: Instant }
   | { type: 'importDataset'; dataset: Dataset }
   | { type: 'restoreAudit'; entries: readonly AuditEntry[] }
+  | { type: 'applyReconstruction'; outcome: ReconstructionOutcome }
   | { type: 'resetAll' };
 
 /**
@@ -116,6 +132,8 @@ export function initialState(settings: ReconstructionSettings): AppState {
     importReport: [],
     calibration: null,
     audit: [],
+    busy: false,
+    pending: null,
     ignoredEvidence: [],
   };
 }

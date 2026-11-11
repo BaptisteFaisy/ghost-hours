@@ -95,6 +95,7 @@ export const AUDITED_ACTIONS: ReadonlySet<string> = new Set([
   'splitConflict',
   'confirmDay',
   'confirmWeek',
+  'confirmSolidBlocks',
   'upsertClient',
   'upsertRule',
   'removeRule',

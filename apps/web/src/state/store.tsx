@@ -8,10 +8,12 @@ import { loadSampleMonth } from '@ghost-hours/fixture-sample-month';
 import { mergeEvidence, reconstruct } from './reconstruct.ts';
 import { clearState, loadState, saveState } from './persistence.ts';
 import { appendAudit, AUDITED_ACTIONS, describeAction } from './audit.ts';
+import { reconstructAsync, shouldUseWorker } from './reconstructAsync.ts';
+import type { ReconstructionOutcome } from './reconstruct.ts';
 import { calendarEvidence } from './calendar.ts';
 import type { PersistedState } from './persistence.ts';
 import { DEFAULT_ACTIVE_MONTH, initialState } from './types.ts';
-import type { AppAction, AppState } from './types.ts';
+import type { AppAction, AppState, PendingReconstruction } from './types.ts';
 
 /**
  * The store (contract 3): one reducer, one context.
@@ -43,18 +45,44 @@ function withReconstruction(state: AppState, patch: Partial<AppState> = {}): App
   const clients = patch.clients ?? state.clients;
   const settings = patch.settings ?? state.settings;
   const previous = patch.blocks ?? state.blocks;
-  const outcome = reconstruct(evidence, clients, settings, previous, state.corrections);
-  const merged = mergeEvidence(outcome.evidence, manualEvidenceOf(state));
+  // A big month is rebuilt off the main thread so the interface never freezes
+  // (idea R-01): the reducer records the request, the provider runs it.
+  if (shouldUseWorker(evidence.length)) {
+    return {
+      ...state,
+      ...patch,
+      status: 'ready',
+      busy: true,
+      pending: {
+        evidence: mergeEvidence(evidence, manualEvidenceOf(state)),
+        clients,
+        settings,
+        previousBlocks: previous,
+        corrections: state.corrections,
+      },
+    };
+  }
+  return applyOutcome(state, patch, reconstruct(evidence, clients, settings, previous, state.corrections));
+}
+
+/** The second half of a reconstruction, shared by the sync and worker paths. */
+function applyOutcome(
+  state: AppState,
+  patch: Partial<AppState>,
+  outcome: ReconstructionOutcome,
+): AppState {
   return {
     ...state,
     ...patch,
     status: 'ready',
+    busy: false,
+    pending: null,
     blocks: outcome.blocks,
     conflicts: outcome.conflicts,
     calibration: outcome.calibration,
     ignoredEvidence: outcome.ignored,
     orphanEvidence: outcome.orphans,
-    evidence: merged,
+    evidence: mergeEvidence(outcome.evidence, manualEvidenceOf(state)),
   };
 }
 
@@ -137,8 +165,10 @@ function applyAction(state: AppState, action: AppAction): AppState {
     case 'resolveConflict': return resolveConflict(state, action.conflictId, action.keepBlockId);
     case 'splitConflict': return splitConflict(state, action.conflictId);
     case 'restoreAudit': return { ...state, audit: action.entries };
+    case 'applyReconstruction': return applyOutcome(state, {}, action.outcome);
     case 'confirmDay': return { ...state, blocks: setStatusIn(state.blocks, dayIds(state, action.dayKey), 'confirmed') };
     case 'confirmWeek': return { ...state, blocks: setStatusIn(state.blocks, weekIds(state, action.weekStart), 'confirmed') };
+    case 'confirmSolidBlocks': return { ...state, blocks: setStatusIn(state.blocks, solidIds(state, action.threshold), 'confirmed') };
     case 'upsertClient': return withReconstruction(state, { clients: upsertClient(action.client, state.clients) });
     case 'upsertRule': return withReconstruction(state, { clients: upsertRule(state.clients, action.rule) });
     case 'removeRule': return withReconstruction(state, { clients: removeRule(state.clients, action.ruleId) });
@@ -354,6 +384,31 @@ function splitConflict(state: AppState, conflictId: string): AppState {
   };
 }
 
+/**
+ * One gesture for the easy cases (idea U-17): confirm every proposed block of
+ * the active month whose proven share reaches the threshold, and leave the
+ * rest for the review. The threshold is a parameter, not a constant, so the
+ * interface can offer "everything solid" and "everything at least likely".
+ */
+/**
+ * Ids of the blocks one gesture can confirm (idea U-17): proposed, inside the
+ * active month, and proven enough. The threshold is a parameter so the
+ * interface can offer "everything solid" or "everything at least likely".
+ */
+function solidIds(state: AppState, threshold: number): ReadonlySet<string> {
+  const prefix = `${state.activeMonth.year}-${String(state.activeMonth.month).padStart(2, '0')}`;
+  return new Set(
+    state.blocks
+      .filter(
+        (block) =>
+          block.status === 'proposed' &&
+          block.provenShare >= threshold &&
+          dayKeyInZone(block.start, state.settings.timeZone).startsWith(prefix),
+      )
+      .map((block) => block.id),
+  );
+}
+
 function markPeriodInvoiced(
   state: AppState,
   clientId: string,
@@ -400,6 +455,31 @@ function toPersisted(state: AppState): PersistedState {
 }
 
 /**
+ * Runs a deferred reconstruction in a worker, then applies its outcome. On
+ * failure the same reconstruction is computed synchronously: losing a month of
+ * import because a worker died is not an option.
+ */
+function useDeferredReconstruction(
+  pending: PendingReconstruction | null,
+  rawDispatch: (action: AppAction) => void,
+): void {
+  useEffect(() => {
+    if (pending === null) return;
+    let cancelled = false;
+    void reconstructAsync(pending)
+      .catch(() =>
+        reconstruct(pending.evidence, pending.clients, pending.settings, pending.previousBlocks, pending.corrections),
+      )
+      .then((outcome) => {
+        if (!cancelled) rawDispatch({ type: 'applyReconstruction', outcome });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pending, rawDispatch]);
+}
+
+/**
  * Writes the state to IndexedDB after every change, once the restore has
  * landed. A failed write is reported in the state, never thrown: losing a
  * gesture silently is worse than showing a warning.
@@ -433,6 +513,8 @@ export function AppProvider(props: { children: ReactNode }): JSX.Element {
     if (!hydratedRef.current) pendingRef.current.push(action);
     rawDispatch(action);
   }, []);
+
+  useDeferredReconstruction(state.pending, rawDispatch);
 
   useEffect(() => {
     let cancelled = false;
