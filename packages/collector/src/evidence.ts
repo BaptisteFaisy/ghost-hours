@@ -1,4 +1,4 @@
-import type { Evidence, EvidenceFileMeta, EvidenceFileWire } from '@ghost-hours/core';
+import type { Evidence, EvidenceFileMeta, EvidenceFileOut } from '@ghost-hours/core';
 import { checkoutEvidenceId, commitEvidenceId, serializeEvidenceFile } from '@ghost-hours/core';
 import { dirname } from 'node:path';
 import type { CommitRecord } from './commits.ts';
@@ -84,12 +84,12 @@ export function buildEvidenceItems(items: readonly Evidence[]): Evidence[] {
   return unique;
 }
 
-export function toEvidenceFile(items: readonly Evidence[], meta: EvidenceFileMeta): EvidenceFileWire {
+export function toEvidenceFile(items: readonly Evidence[], meta: EvidenceFileMeta): EvidenceFileOut {
   return serializeEvidenceFile(items, meta);
 }
 
 /** Stable JSON: two identical collections produce identical bytes (HEU-P-14). */
-export function evidenceText(wire: EvidenceFileWire): string {
+export function evidenceText(wire: EvidenceFileOut): string {
   return `${JSON.stringify(wire, null, 2)}\n`;
 }
 
@@ -97,7 +97,7 @@ export function evidenceText(wire: EvidenceFileWire): string {
 export async function writeEvidenceFile(
   fs: FsPort,
   outPath: string,
-  wire: EvidenceFileWire,
+  wire: EvidenceFileOut,
 ): Promise<void> {
   const temporary = `${outPath}.tmp`;
   await fs.mkdir(dirname(outPath));

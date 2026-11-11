@@ -82,6 +82,16 @@ export const evidenceFileSchema = z.object({
 
 export type EvidenceFileWire = z.infer<typeof evidenceFileSchema>;
 
+/** What we write: instants are ISO-8601 strings on the wire (spec D.10). */
+export interface EvidenceFileOut {
+  readonly version: number;
+  readonly collected_at: string;
+  readonly generator: string;
+  readonly timeZone?: string;
+  readonly repos?: readonly z.infer<typeof repoInfoSchema>[];
+  readonly items: readonly Record<string, unknown>[];
+}
+
 export interface EvidenceFileMeta {
   readonly collectedAt: number;
   readonly generator?: string;
@@ -138,15 +148,17 @@ export function normalizeItem(item: z.infer<typeof evidenceItemSchema>): Evidenc
   } as Evidence;
 }
 
-export function serializeEvidenceFile(evidence: readonly Evidence[], meta: EvidenceFileMeta): EvidenceFileWire {
+export function serializeEvidenceFile(evidence: readonly Evidence[], meta: EvidenceFileMeta): EvidenceFileOut {
   return {
     version: EVIDENCE_FILE_VERSION,
-    collected_at: meta.collectedAt,
+    // On the wire an instant is an ISO-8601 string (spec D.10); inside the app
+    // it is epoch milliseconds. This is the only place the two meet.
+    collected_at: new Date(meta.collectedAt).toISOString(),
     generator: meta.generator ?? 'ghost-hours',
     timeZone: meta.timeZone,
     repos: meta.repos ? [...meta.repos] : undefined,
     items: evidence.map(toWireItem),
-  } as EvidenceFileWire;
+  };
 }
 
 function toWireItem(item: Evidence): Record<string, unknown> {

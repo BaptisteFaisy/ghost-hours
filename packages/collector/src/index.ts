@@ -1,4 +1,4 @@
-import type { Evidence, EvidenceFileMeta, EvidenceFileWire, Instant } from '@ghost-hours/core';
+import type { Evidence, EvidenceFileMeta, EvidenceFileOut, Instant } from '@ghost-hours/core';
 import { addDaysInZone, parseDayKey, zonedTimeToInstant } from '@ghost-hours/core';
 import { basename, resolve } from 'node:path';
 import type { CommitRecord } from './commits.ts';
@@ -215,7 +215,7 @@ function buildMeta(report: readonly RepoReport[], options: CollectOptions, colle
 async function emit(
   fs: FsPort,
   options: CollectOptions,
-  wire: EvidenceFileWire,
+  wire: EvidenceFileOut,
   clean: boolean,
 ): Promise<string | null> {
   if (options.dryRun || options.json || !clean) return null;
