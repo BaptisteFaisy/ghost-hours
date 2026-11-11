@@ -4,6 +4,7 @@ import { sortEvidence } from '@ghost-hours/mapping';
 import { useApp, useDispatch } from '../state/store.tsx';
 import { blockById, clientById, evidenceOfBlock } from '../state/selectors.ts';
 import { useI18n } from '../i18n/index.ts';
+import { BlockReason } from '../components/ReasonLine.tsx';
 import type { MessageKey } from '../i18n/index.ts';
 
 /**
@@ -171,6 +172,7 @@ function BlockPanel(props: BlockPanelProps): JSX.Element {
         </div>
       </dl>
 
+      <BlockReason block={block} />
       <Stitch proofs={proofs} />
       <ProofList proofs={proofs} />
 

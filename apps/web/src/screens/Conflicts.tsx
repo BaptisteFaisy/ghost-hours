@@ -1,9 +1,9 @@
-import type { Block, BlockReason, Conflict, Evidence, Minutes } from '@ghost-hours/core';
+import type { Block, Conflict, Evidence, Minutes } from '@ghost-hours/core';
 import { msToWholeMinutes } from '@ghost-hours/core';
 import { useApp, useDispatch } from '../state/store.tsx';
+import { BlockReason as BlockReasonLine } from '../components/ReasonLine.tsx';
 import { blockById, clientById } from '../state/selectors.ts';
 import { useI18n } from '../i18n/index.ts';
-import type { I18nApi } from '../i18n/index.ts';
 import type { AppState } from '../state/types.ts';
 
 /**
@@ -123,49 +123,9 @@ function BlockSide(props: { block: Block }): JSX.Element {
         <span>{t('week.proven')}: {formatDuration(provenMinutes(block))}</span>
         <span>{t('week.assumed')}: {formatDuration(Math.min(block.assumedLeadInMinutes, totalMinutes(block)))}</span>
       </div>
-      <BlockReason block={block} />
+      <BlockReasonLine block={block} />
     </div>
   );
-}
-
-function BlockReason(props: { block: Block }): JSX.Element | null {
-  const state = useApp();
-  const { t } = useI18n();
-  const reason = props.block.reason;
-  if (reason === undefined) return null;
-  const nameOf = (clientId: string): string => clientById(state, clientId)?.name ?? clientId;
-  return (
-    <p className="block-reason">
-      <span className="visually-hidden">{t('block.reason')}: </span>
-      {reasonText(reason, t, nameOf)}
-    </p>
-  );
-}
-
-/** Translate the structured reason of a block (`reason.*` keys). */
-function reasonText(
-  reason: BlockReason,
-  t: I18nApi['t'],
-  nameOf: (clientId: string) => string,
-): string {
-  switch (reason.kind) {
-    case 'checkout':
-      return t('reason.checkout', { repo: reason.repo, minutes: reason.minutes });
-    case 'assumed':
-      return `${t('reason.assumed', { minutes: reason.minutes })} ${t(`reason.boundedBy.${reason.boundedBy}`)}`;
-    case 'resume':
-      return t('reason.resume', { minutes: reason.pauseMinutes });
-    case 'meeting':
-      return t('reason.meeting');
-    case 'manual':
-      return t('reason.manual');
-    case 'merged':
-      return t('reason.merged', { count: reason.count });
-    case 'trimmed':
-      return t('reason.trimmed', { client: nameOf(reason.byClient) });
-    case 'conflict':
-      return t('reason.conflict', { client: nameOf(reason.withClient) });
-  }
 }
 
 /** The proofs in cause: instant, then repo/branch/summary or meeting title. */
