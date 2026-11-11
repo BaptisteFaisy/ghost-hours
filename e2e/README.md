@@ -43,8 +43,10 @@ the product changes, one file changes.
 `.github/workflows/e2e.yml` runs it **after a successful deploy** (against the
 public URL) and on **`workflow_dispatch`** (against a local preview of the
 branch). It never runs on a pull request: a browser run must not eat the
-five-minute budget that reviewers wait for. Videos, traces and screenshots of a
-failure are uploaded as the `e2e-artifacts` build artifact.
+five-minute budget that reviewers wait for. Traces and screenshots of a failure are
+uploaded as the `e2e-artifacts` build artifact. Video is off by default because it needs
+Playwright's own `ffmpeg`, absent from the CI server: set `GHOST_HOURS_E2E_VIDEO=1` on a machine
+that has it.
 
 ## Recording the submission video
 

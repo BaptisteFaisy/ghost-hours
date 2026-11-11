@@ -33,7 +33,11 @@ export default defineConfig({
     baseURL: process.env.GHOST_HOURS_URL ?? 'http://localhost:4173',
     viewport: { width: 1440, height: 900 },
     locale: 'en-GB',
-    video: 'retain-on-failure',
+    // Video needs Playwright's own ffmpeg, which the CI server does not have
+    // and which we refuse to download at every run. Traces and screenshots
+    // need nothing extra, so they stay on. Set GHOST_HOURS_E2E_VIDEO=1 on a
+    // workstation that has ffmpeg to record the run.
+    video: process.env.GHOST_HOURS_E2E_VIDEO === '1' ? 'retain-on-failure' : 'off',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: executablePath === undefined ? {} : { executablePath, args: ['--no-sandbox'] },
