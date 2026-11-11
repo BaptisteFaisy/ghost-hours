@@ -169,15 +169,17 @@ describe('HEU-P-11 — durations and DST', () => {
     );
   });
 
-  it('HEU-P-11: the start instant jumps from 07:00Z to 08:00Z on 2026-10-25', () => {
-    const events = expandRecurring(report(dailyFixture({ year: 2026, month: 10, day: 20 }, 10)).events, {
-      start: at(2026, 10, 19),
-      end: at(2026, 11, 1),
+  // Autumn transition (Europe/Paris falls back from UTC+2 to UTC+1 at 03:00):
+  // the same 09:00 local meeting starts one hour later in UTC.
+  it('HEU-P-11: the start instant shifts by one hour across the autumn transition', () => {
+    const events = expandRecurring(report(dailyFixture({ year: 2027, month: 10, day: 25 }, 10)).events, {
+      start: at(2027, 10, 24),
+      end: at(2027, 11, 5),
     }, { defaultTimeZone: TZ });
-    const before = events.find((meeting) => dayKeyInZone(meeting.start, TZ) === '2026-10-24');
-    const after = events.find((meeting) => dayKeyInZone(meeting.start, TZ) === '2026-10-25');
-    expect(before?.start).toBe(at(2026, 10, 24, 7, 0));
-    expect(after?.start).toBe(at(2026, 10, 25, 8, 0));
+    const before = events.find((meeting) => dayKeyInZone(meeting.start, TZ) === '2027-10-30');
+    const after = events.find((meeting) => dayKeyInZone(meeting.start, TZ) === '2027-10-31');
+    expect(before?.start).toBe(at(2027, 10, 30, 7, 0));
+    expect(after?.start).toBe(at(2027, 10, 31, 8, 0));
     expect(after && after.end - after.start).toBe(HOUR);
   });
 
