@@ -12,6 +12,7 @@ requests, and a timeout is never raised.
 | `ci-budget` | Fails when a job has no `timeout-minutes` or declares more than five minutes | `.github/workflows/ci-budget.yml` |
 | `couche0` | Every changed file must appear in the `## Scope` section of the pull request; forbidden patterns (forced pushes, privileged triggers, API keys) are refused; guard files need an explicit `SAMVISION_ALLOW_GUARD_BUMP` in the body | `.github/workflows/couche0.yml` |
 | `stale-base-guard` | Tells how far behind `main` a branch is, without blocking | `.github/workflows/stale-base-guard.yml` |
+| `e2e` | A real browser drives the built app: the sample month's figures, no request to a foreign origin, the reviewer path, the CSV download. After a deploy and on demand — **never on a pull request** | `.github/workflows/e2e.yml`, suite in `e2e/` |
 
 The contest compliance step of `ci` runs three guards written for this repository:
 

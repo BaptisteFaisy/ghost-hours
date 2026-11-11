@@ -1,0 +1,88 @@
+name: e2e (browser smoke)
+
+# The end-to-end suite of `.kiro/specs/e2e-smoke`: a real browser drives the
+# built application, checks the announced figures of the sample month, and
+# proves that no request leaves the page.
+#
+# Never a pull-request check: a browser run costs tens of seconds and the
+# verdict of a pull request must land in five minutes (CI budget rule). It runs
+# after a successful deploy, against the public URL, and on demand against a
+# local preview of the branch.
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy (GitHub Pages)"]
+    types: [completed]
+
+concurrency:
+  group: e2e-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: e2e
+    runs-on: [self-hosted, linux, x64, ghost-hours-worker]
+    timeout-minutes: 5
+    env:
+      # Public site after a deploy; local preview on a manual run.
+      GHOST_HOURS_URL: ${{ github.event_name == 'workflow_run' && 'https://baptistefaisy.github.io/ghost-hours/' || 'http://localhost:4173/ghost-hours/' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          clean: false
+
+      - name: Clean workspace
+        shell: bash
+        run: git clean -ffdx -e e2e/artifacts
+
+      - name: Toolchain
+        shell: bash
+        run: source .github/ci/toolchain.sh
+
+      - name: Install
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm install --frozen-lockfile --prefer-offline --store-dir "$HOME/tools/pnpm-store"
+
+      - name: Browser
+        shell: bash
+        run: |
+          for candidate in "$GHOST_HOURS_BROWSER" /usr/bin/google-chrome /usr/bin/chromium /usr/bin/chromium-browser; do
+            if [ -n "$candidate" ] && [ -x "$candidate" ]; then echo "browser: $candidate"; exit 0; fi
+          done
+          echo "::error::no browser found — set GHOST_HOURS_BROWSER"; exit 1
+
+      # A manual run tests the branch: build it and serve it locally.
+      - name: Build and serve (manual run only)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm build
+          nohup pnpm --filter @ghost-hours/web preview --port 4173 > /tmp/gh-preview.log 2>&1 &
+          timeout 90 bash -c 'until curl -sf -o /dev/null http://localhost:4173/ghost-hours/; do sleep 2; done'
+
+      - name: Smoke suite
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm e2e
+
+      - name: Stop the preview
+        if: always() && github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: pkill -f "vite preview" || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-artifacts
+          path: e2e/artifacts
+          retention-days: 7
+          if-no-files-found: ignore
