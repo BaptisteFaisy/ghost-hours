@@ -56,6 +56,15 @@ sorted by what they are, unreadable ones are named with the reason, and nothing 
 byte is parsed inside the tab. Recurring meetings are expanded, all-day and cancelled events are
 set aside and reported.
 
+## What it looks like
+
+| The month | The week | The draft |
+|---|---|---|
+| ![The month counter: 104 h found, 92 h declared, 12 ghost hours, €780](docs/screenshots/month.png) | ![The week grid: a confirmed block solid, proposed blocks dashed, hour axis on the left](docs/screenshots/week.png) | ![The invoice draft: lines, rounding rule, Draft, exports](docs/screenshots/invoice.png) |
+
+The month counter, the week grid and the draft are recomputed from the evidence on every change;
+the figures above are the fictitious month's, asserted by `fixtures/sample-month/sample-month.test.ts`.
+
 ## How it is put together
 
 | Package | Role |
