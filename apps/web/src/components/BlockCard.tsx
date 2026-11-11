@@ -65,8 +65,9 @@ export function BlockCard(props: BlockCardProps): JSX.Element {
     >
       <div className="block-heading">
         <span className="block-client">{clientName}</span>
-        <span className="block-status">
-          {t(`status.${block.status}`)} · {formatTime(block.start)}–{formatTime(block.end)}
+        <span className="block-status">{t(`status.${block.status}`)}</span>
+        <span className="block-times">
+          {formatTime(block.start)}–{formatTime(block.end)}
         </span>
       </div>
 
@@ -103,16 +104,23 @@ interface BlockActionsProps {
 interface ActionButtonProps {
   readonly label: string;
   readonly glyph: string;
+  readonly text: string;
   readonly tone?: 'primary' | 'danger';
   readonly onClick: () => void;
 }
 
-/** An icon-only button: the glyph is decorative, the label carries the name. */
+/**
+ * A gesture button: the glyph stays decorative, the visible text label and the
+ * `aria-label` carry the name of the gesture (never a bare glyph).
+ */
 function ActionButton(props: ActionButtonProps): JSX.Element {
   const className = props.tone === undefined ? undefined : props.tone;
   return (
     <button type="button" className={className} aria-label={props.label} onClick={props.onClick}>
-      <span aria-hidden="true">{props.glyph}</span>
+      <span className="action-glyph" aria-hidden="true">
+        {props.glyph}
+      </span>
+      <span className="action-text">{props.text}</span>
     </button>
   );
 }
@@ -123,48 +131,90 @@ function BlockActions(props: BlockActionsProps): JSX.Element {
   const dispatch = useDispatch();
   const { t, formatTime, formatDuration } = useI18n();
   const step = formatDuration(ADJUST_STEP_MINUTES);
+  const at = formatTime(block.start);
   const shift = (start: Instant, end: Instant): void => {
     dispatch({ type: 'adjustBlock', blockId: block.id, start, end });
   };
-  const at = formatTime(block.start);
   return (
     <div className="block-actions">
-      <ActionButton
-        label={`${t('week.confirm')} — ${clientName} — ${at}`}
-        glyph="✓"
-        tone="primary"
-        onClick={() => dispatch({ type: 'confirmBlock', blockId: block.id })}
-      />
-      <ActionButton
-        label={`${t('week.reject')} — ${clientName} — ${at}`}
-        glyph="✗"
-        tone="danger"
-        onClick={() => dispatch({ type: 'rejectBlock', blockId: block.id })}
-      />
-      <ActionButton
-        label={`${t('week.adjust')} −${step}`}
-        glyph="⤺"
-        onClick={() => shift(block.start - ADJUST_STEP_MINUTES * 60_000, block.end)}
-      />
-      <ActionButton
-        label={`${t('week.adjust')} +${step}`}
-        glyph="⤻"
-        onClick={() => shift(block.start, block.end + ADJUST_STEP_MINUTES * 60_000)}
-      />
+      <SettleButtons block={block} clientName={clientName} at={at} />
+      <AdjustButtons step={step} onShiftBack={() => shift(block.start - STEP_MS, block.end)} onShiftForward={() => shift(block.start, block.end + STEP_MS)} />
       <ActionButton
         label={t('week.split')}
         glyph="✂"
+        text={t('week.actionSplit')}
         onClick={() => dispatch({ type: 'splitBlock', blockId: block.id, at: midpoint(block) })}
       />
       <ActionButton
         label={t('week.openBlock')}
         glyph="ⓘ"
+        text={t('week.actionInfo')}
         onClick={() => {
           dispatch({ type: 'selectBlock', blockId: block.id });
           onOpen?.(block.id);
         }}
       />
     </div>
+  );
+}
+
+const STEP_MS = ADJUST_STEP_MINUTES * 60_000;
+
+interface SettleButtonsProps {
+  readonly block: Block;
+  readonly clientName: string;
+  readonly at: string;
+}
+
+/** Confirm or reject: the two gestures that settle a block. */
+function SettleButtons(props: SettleButtonsProps): JSX.Element {
+  const dispatch = useDispatch();
+  const { t } = useI18n();
+  const who = `${props.clientName} — ${props.at}`;
+  return (
+    <>
+      <ActionButton
+        label={`${t('week.confirm')} — ${who}`}
+        glyph="✓"
+        text={t('week.actionConfirm')}
+        tone="primary"
+        onClick={() => dispatch({ type: 'confirmBlock', blockId: props.block.id })}
+      />
+      <ActionButton
+        label={`${t('week.reject')} — ${who}`}
+        glyph="✗"
+        text={t('week.actionReject')}
+        tone="danger"
+        onClick={() => dispatch({ type: 'rejectBlock', blockId: props.block.id })}
+      />
+    </>
+  );
+}
+
+interface AdjustButtonsProps {
+  readonly step: string;
+  readonly onShiftBack: () => void;
+  readonly onShiftForward: () => void;
+}
+
+/** Move the start back or the end forward by one adjust step. */
+function AdjustButtons(props: AdjustButtonsProps): JSX.Element {
+  const { t } = useI18n();
+  return (
+    <>
+      <ActionButton
+        label={`${t('week.adjust')} −${props.step}`}
+        glyph="⤺"
+        text={t('week.actionShiftBack')}
+        onClick={props.onShiftBack}
+      />
+      <ActionButton
+        label={`${t('week.adjust')} +${props.step}`}
+        glyph="⤻"
+        text={t('week.actionShiftForward')}
+        onClick={props.onShiftForward}
+      />
+    </>
   );
 }
 
