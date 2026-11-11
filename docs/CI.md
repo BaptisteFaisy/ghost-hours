@@ -26,7 +26,7 @@ the agent works, and again on every pull request.
 
 ## Runners
 
-Jobs run on self-hosted workers on the build server, a pool of four: `r630-ghost-hours-01..04`,
+Jobs run on self-hosted workers on the build server: `r630-ghost-hours-01..04`, a pool of four,
 label `ghost-hours-worker`. Node and pnpm come from `~/tools` on that machine; `.github/ci/toolchain.sh`
 finds them and exports them for every step, and falls back to whatever is already on `PATH` (so the
 same workflow would run on a hosted image). The pnpm store lives on the machine, which turns an
