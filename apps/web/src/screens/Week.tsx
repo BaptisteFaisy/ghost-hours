@@ -128,17 +128,17 @@ interface DayButtonsProps {
 /** One gesture per day: the whole day is confirmed at once (D.7 P5). */
 function DayButtons(props: DayButtonsProps): JSX.Element {
   const dispatch = useDispatch();
-  const { t } = useI18n();
+  const { t, formatDay } = useI18n();
   return (
     <div className="week-days-actions">
       {props.days.map((day) => (
         <button
           key={day.dayKey}
           type="button"
-          aria-label={`${t('week.confirmDay')} — ${day.dayKey}`}
+          aria-label={`${t('week.confirmDay')} — ${formatDay(day.dayKey)}`}
           onClick={() => dispatch({ type: 'confirmDay', dayKey: day.dayKey })}
         >
-          {t('week.confirmDay')} · {day.dayKey}
+          {t('week.confirmDay')} · {formatDay(day.dayKey)}
         </button>
       ))}
     </div>

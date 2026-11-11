@@ -360,21 +360,34 @@ th {
 }
 
 /*
- * The stitch: a seam along the block carrying one glyph per source —
- * a dot for a commit, a dash for a meeting, a feather for a note.
+ * The stitch: a thin vertical seam along the left edge of the block, carrying
+ * one glyph per source — a dot for a commit, a dash for a meeting, a feather
+ * for a note — linked by a dotted line.
  */
 .stitch {
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  bottom: 6px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
-  margin-top: 4px;
+  gap: 2px;
+  font-size: 0.75rem;
   color: var(--ink-soft);
 }
 
 .block[data-status="confirmed"] .stitch,
 .block[data-status="conflict"] .stitch {
   color: inherit;
+}
+
+.stitch-source {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
 }
 
 .stitch-glyph[data-source="git"]::before {
@@ -395,9 +408,9 @@ th {
 
 .stitch-line {
   flex: 1;
-  height: 0;
-  border-top: 2px dotted currentColor;
-  min-width: 12px;
+  width: 0;
+  min-height: 4px;
+  border-left: 1px dotted currentColor;
 }
 
 /* -------------------------------------------------------- month views -- */
@@ -436,18 +449,24 @@ th {
 
 .day-load {
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 2px;
-  height: 120px;
 }
 
 .day-load-column {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 2px;
+  align-items: stretch;
+  gap: 4px;
+}
+
+/* The bar area is 160 px tall: the busiest day of the month fills it. */
+.day-load-bar-area {
+  height: 160px;
+  display: flex;
+  align-items: flex-end;
 }
 
 .day-load-bar {
@@ -457,26 +476,162 @@ th {
   min-height: 2px;
 }
 
+.day-load-label {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ------------------------------------------------------- week grid -- */
 
-.week-grid {
+/*
+ * The timetable: a corner cell, the seven day headings, the hour axis on the
+ * left and the seven day columns. One hour is 48 px tall, so a block's `top`
+ * and `height` (set inline from its bounds) land exactly on the axis.
+ */
+.week-timetable {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  column-gap: 6px;
+  margin-top: 8px;
+}
+
+.week-grid-headings {
+  grid-column: 2;
+  grid-row: 1;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
 }
 
-.week-day {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  padding: 6px;
-  min-height: 120px;
-}
-
 .week-day-heading {
   font-weight: 600;
+  font-size: 0.8rem;
+  padding-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.week-day-weekday {
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+
+.week-hour-axis {
+  grid-column: 1;
+  grid-row: 2;
+  position: relative;
+  height: calc(13 * 48px);
+}
+
+.week-hour-tick {
+  position: absolute;
+  right: 6px;
+  transform: translateY(-50%);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.week-columns-body {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.week-day-column {
+  position: relative;
+  height: calc(13 * 48px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background-image: linear-gradient(var(--line) 1px, transparent 1px);
+  background-size: 100% 48px;
+  background-color: var(--surface);
+}
+
+.week-day-cells {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.week-cell {
+  height: 48px;
+}
+
+.week-day-blocks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* A placed block: absolute in its day column, sharing width with its lanes. */
+.week-lane {
+  position: absolute;
+  pointer-events: auto;
+  padding: 0 2px;
+}
+
+.week-lane .block {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 4px 4px 4px 16px;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.week-grid-legend {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+/* The heading of a block: client, status and hours on their own lines. */
+.block-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.block-heading .block-client {
+  font-weight: 650;
+}
+
+/* Gesture buttons keep their glyph and show a short text label under it. */
+.block-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.block-actions button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 2px 5px;
+  font-size: 0.62rem;
+  line-height: 1.2;
+}
+
+.block-actions .action-glyph {
   font-size: 0.85rem;
-  margin-bottom: 6px;
+  line-height: 1.1;
+}
+
+.block-client-picker select {
+  font-size: 0.72rem;
+  padding: 2px 4px;
 }
 
 /* ------------------------------------------------------------ motion -- */
