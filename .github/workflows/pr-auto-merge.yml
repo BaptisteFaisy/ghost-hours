@@ -13,7 +13,8 @@
 # d'un push d'auteur arrivé entre-temps. Forks exclus ; brouillons rebasés
 # et réconciliés mais jamais mergés.
 # Conflits (v5, 2026-10-28) : l'agent Fireworks tente de les résoudre
-# (.github/fireworks/conflict_agent.py, modèle MiniMax M3.1 Flash) : résolution
+# (.github/fireworks/conflict_agent.py ; modèle et hôte configurés par
+# FIREWORKS_MODEL / FIREWORKS_BASE_URL — ici InferHub) : résolution
 # conflit par conflit, fin du rebase, push avec bail, compte rendu sur la PR.
 # Sans le secret FIREWORKS_API_KEY, on saute comme avant et l'auteur rebase à
 # la main. Coupe-circuit : variable de dépôt FIREWORKS_AGENT_RESOLVE=0.
