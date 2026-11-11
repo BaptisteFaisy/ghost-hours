@@ -33,6 +33,14 @@ finds them and exports them for every step, and falls back to whatever is alread
 same workflow would run on a hosted image). The pnpm store lives on the machine, which turns an
 install into a link farm instead of a download.
 
+## Publishing the site
+
+`.github/workflows/deploy.yml` builds `apps/web` and replaces the content of the **`gh-pages`
+branch**, which is what GitHub Pages serves (build type `legacy`, source `gh-pages` / root). The
+site therefore lives in the repository itself: no artifact store, no deployment API, and the public
+URL keeps working for as long as the repository does. That branch is generated content — it is
+replaced wholesale, never merged into, and the ruleset covers `main` only.
+
 ## Merge queue
 
 `main` is protected by a ruleset: a pull request is mandatory, the history stays linear, and the
