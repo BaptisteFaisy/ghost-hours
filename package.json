@@ -1,0 +1,37 @@
+{
+  "name": "ghost-hours",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ghost Hours — reconstruct the hours you actually worked from Git commits, calendar events and notes, then draft an invoice.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "pnpm --filter @ghost-hours/collector build && pnpm --filter @ghost-hours/web build",
+    "dev": "pnpm --filter @ghost-hours/web dev",
+    "preview": "pnpm --filter @ghost-hours/web preview",
+    "collect": "node packages/collector/bin/ghost-hours.mjs collect"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "eslint": "^9.18.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "fast-check": "^3.23.2",
+    "jsdom": "^26.0.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^2.1.8"
+  }
+}
