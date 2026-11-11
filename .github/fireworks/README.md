@@ -24,6 +24,31 @@ Les deux modules sont chargés par `conflict_agent.py` depuis `origin/main`
 (import direct d'abord) : le sweep ne copie que le script d'agent dans `/tmp`,
 et une branche de PR peut être antérieure à ce découpage.
 
+## Fournisseur de modèle
+
+Le nom des variables est historique (`FIREWORKS_*`) ; **le fournisseur, lui, se
+choisit par `FIREWORKS_BASE_URL`**. Sur ce dépôt, les agents tournent sur
+**InferHub** (`api.inferhub.dev/v1/chat/completions`, modèle `combo/cheap`),
+parce que le compte Fireworks d'origine est suspendu (HTTP 412
+`PRECONDITION_FAILED`) : l'agent de conflit se déclenchait, refusait de deviner
+et rendait la main à l'auteur — comportement voulu, mais sans résolution.
+
+Les trois réglages, côté dépôt :
+
+| Réglage | Type | Valeur |
+|---|---|---|
+| `FIREWORKS_API_KEY` | secret | la clé du fournisseur actif |
+| `FIREWORKS_BASE_URL` | variable | URL complète de `chat/completions` |
+| `FIREWORKS_MODEL` | variable | `combo/cheap` |
+
+Le contrat d'appel est celui d'OpenAI : `{model, messages, temperature,
+max_tokens}` et `Authorization: Bearer`. Tout fournisseur compatible fonctionne
+sans toucher au code. `triage-rouge.yml` passait déjà `FIREWORKS_BASE_URL` ;
+`pr-auto-merge.yml` ne le passait pas, d'où la ligne ajoutée.
+
+Coupe-circuit inchangé : `FIREWORKS_AGENT_RESOLVE=0` désactive l'agent, qui
+commente alors ce qu'il aurait fallu faire au lieu d'essayer.
+
 ## Contrat d'appel
 
 ```bash
