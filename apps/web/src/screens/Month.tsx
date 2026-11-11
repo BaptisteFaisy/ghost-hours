@@ -142,6 +142,18 @@ interface DayLoadBarsProps {
   readonly dayLoad: readonly DayLoadEntry[];
 }
 
+/** Height of the bar container, in pixels: the busiest day fills it. */
+const DAY_LOAD_MAX_PX = 160;
+
+function barHeightPx(minutes: Minutes, max: Minutes): number {
+  return Math.max(2, Math.round((minutes / max) * DAY_LOAD_MAX_PX));
+}
+
+/** `2026-11-02` → `02`: the short day label under each bar. */
+function shortDayLabel(dayKey: string): string {
+  return dayKey.slice(8);
+}
+
 function DayLoadBars(props: DayLoadBarsProps): JSX.Element {
   const { t, formatDuration, formatDay } = useI18n();
   const max = Math.max(1, ...props.dayLoad.map((entry) => entry.minutes));
@@ -151,13 +163,18 @@ function DayLoadBars(props: DayLoadBarsProps): JSX.Element {
       <div className="day-load" role="group" aria-label={t('month.perDay')}>
         {props.dayLoad.map((entry) => (
           <div className="day-load-column" key={entry.dayKey}>
-            <progress
-              className="day-load-bar"
-              max={max}
-              value={entry.minutes}
-              aria-label={`${formatDay(entry.dayKey)}: ${formatDuration(entry.minutes)}`}
-            />
-            <span className="visually-hidden">{formatDuration(entry.minutes)}</span>
+            <div className="day-load-bar-area">
+              <div
+                className="day-load-bar"
+                style={{ height: `${barHeightPx(entry.minutes, max)}px` }}
+                title={`${formatDay(entry.dayKey)}: ${formatDuration(entry.minutes)}`}
+                role="img"
+                aria-label={`${formatDay(entry.dayKey)}: ${formatDuration(entry.minutes)}`}
+              />
+            </div>
+            <span className="day-load-label" aria-hidden="true">
+              {shortDayLabel(entry.dayKey)}
+            </span>
           </div>
         ))}
       </div>

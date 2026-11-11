@@ -84,6 +84,12 @@ export const en = {
   'week.proven': 'Proven',
   'week.noBlocks': 'No block on this day.',
   'week.openBlock': 'Open the evidence of this block',
+  'week.actionConfirm': 'Confirm',
+  'week.actionReject': 'Reject',
+  'week.actionShiftBack': '−15m',
+  'week.actionShiftForward': '+15m',
+  'week.actionSplit': 'Split',
+  'week.actionInfo': 'Info',
 
   'evidence.title': 'Evidence',
   'evidence.empty': 'Select a block to see the proofs it rests on.',
