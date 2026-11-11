@@ -47,6 +47,11 @@ const run = (evidence: readonly Evidence[]) => sessionize({ clients: CLIENTS, se
 const provenMinutes = (blocks: readonly { start: number; end: number; provenShare: number }[]): number =>
   blocks.reduce((sum, block) => sum + ((block.end - block.start) / 60_000) * block.provenShare, 0);
 
+const provenMinutesOf = (
+  blocks: readonly { start: number; end: number; provenShare: number; clientId: string }[],
+  clientId: string,
+): number => provenMinutes(blocks.filter((block) => block.clientId === clientId));
+
 describe('HEU-P-01 — no two blocks ever overlap', () => {
   it('holds for any scenario', () => {
     fc.assert(
@@ -132,19 +137,20 @@ describe('HEU-P-04 — adding a proof never lowers the proven time', () => {
     );
   });
 
-  it('is monotone with several clients while no new contradiction appears', () => {
-    // With two clients, a new proof can create a contradiction; the tool then
-    // shows a conflict instead of billing the minute, and the *counted* proven
-    // time may drop. That is prudence working, not a regression: the property
-    // is asserted whenever the added proof contradicts nothing.
+  it('never lowers the proven time of the client that gained the proof', () => {
+    // With several clients the *global* proven time can legitimately fall: a
+    // new proof can extend one client's session so that it now overlaps another
+    // client's, and the first-come trimming hands the shared minutes to whoever
+    // started earlier. What must never happen is that the client who gained a
+    // proof loses proven time — so the property is asserted per client, which is
+    // the invariant that actually protects a bill.
     fc.assert(
       fc.property(scenario, fc.integer({ min: 0, max: MAX_Q }), (evidence, q) => {
-        const before = run(evidence);
-        const after = run([...evidence, commit('extra', instantOf(q), 'acme')]);
-        if (after.conflicts.length > before.conflicts.length) return;
-        expect(provenMinutes(after.blocks)).toBeGreaterThanOrEqual(provenMinutes(before.blocks) - 1e-9);
+        const before = provenMinutesOf(run(evidence).blocks, 'acme');
+        const after = provenMinutesOf(run([...evidence, commit('extra', instantOf(q), 'acme')]).blocks, 'acme');
+        expect(after).toBeGreaterThanOrEqual(before - 1e-9);
       }),
-      { numRuns: 60 },
+      { numRuns: 80 },
     );
   });
 });

@@ -43,6 +43,11 @@ function Shell(): JSX.Element {
         <h1 className="app-title">{t('app.title')}</h1>
         <p className="app-tagline">{t('app.tagline')}</p>
       </header>
+      {state.busy && (
+        <p role="status" aria-live="polite">
+          {t('app.busy')}
+        </p>
+      )}
       <nav className="app-nav" aria-label={t('nav.label')}>
         <ul>
           {NAV_ITEMS.map((item) => (

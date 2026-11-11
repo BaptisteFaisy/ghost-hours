@@ -112,6 +112,25 @@ describe('Invoice', () => {
 
 });
 
+describe('Invoice — objections and defensibility', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    stubBrowserStorage();
+    clearBrowserStorage();
+  });
+
+  it('lists at least one objection and a defensibility score out of 100', async () => {
+    renderInvoice();
+    const region = await screen.findByRole('region', { name: 'What a client could argue' });
+    expect(within(region).getAllByRole('listitem').length).toBeGreaterThan(0);
+    const scoreText = within(region).getByText(/\/ 100$/).textContent ?? '';
+    const score = Number.parseInt(scoreText, 10);
+    expect(score).toBeGreaterThanOrEqual(0);
+    expect(score).toBeLessThanOrEqual(100);
+  });
+});
+
 describe('Invoice — tax, annex and client', () => {
   afterEach(cleanup);
 

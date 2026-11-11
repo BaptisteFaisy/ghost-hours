@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Cents, Minutes } from '@ghost-hours/core';
 import { dayKeyInZone, monthRangeInZone } from '@ghost-hours/core';
 import { useApp, useDispatch } from '../state/store.tsx';
@@ -6,6 +6,7 @@ import { clientById, monthCounter } from '../state/selectors.ts';
 import type { AppState } from '../state/types.ts';
 import { useI18n } from '../i18n/index.ts';
 import { formatHoursShort } from '../components/format.ts';
+import { GapExplainer } from '../components/GapExplainer.tsx';
 
 /**
  * The month screen (D.11): the ghost-hours counter, the load of each day and
@@ -50,6 +51,8 @@ export function Month(): JSX.Element {
         ghost={ghost}
         amount={amount}
       />
+      <GapExplainer />
+      <ConfirmSolid />
       <h3>{t('month.perDay')}</h3>
       <DayLoadBars dayLoad={dayLoad} />
       <h3>{t('month.perClient')}</h3>
@@ -59,6 +62,58 @@ export function Month(): JSX.Element {
         onDeclare={(clientId, minutes) => dispatch({ type: 'setDeclared', clientId, minutes })}
       />
     </section>
+  );
+}
+
+const SOLID_THRESHOLD = 0.8;
+
+/** Blocks the one gesture can confirm: proposed, in the active month, proven enough. */
+function proposedSolidCount(state: AppState): number {
+  const prefix = `${state.activeMonth.year}-${String(state.activeMonth.month).padStart(2, '0')}`;
+  return state.blocks.filter(
+    (block) =>
+      block.status === 'proposed' &&
+      block.provenShare >= SOLID_THRESHOLD &&
+      dayKeyInZone(block.start, state.settings.timeZone).startsWith(prefix),
+  ).length;
+}
+
+type SolidNotice = { readonly kind: 'done'; readonly count: number } | { readonly kind: 'none' };
+
+/**
+ * One gesture for the easy cases (idea U-17): confirm every proposed block of
+ * the active month whose proven share reaches the threshold, and leave the
+ * rest for the review.
+ */
+function ConfirmSolid(): JSX.Element {
+  const state = useApp();
+  const dispatch = useDispatch();
+  const { t } = useI18n();
+  const [notice, setNotice] = useState<SolidNotice | null>(null);
+  const hintId = 'confirm-solid-hint';
+
+  const confirm = (): void => {
+    const count = proposedSolidCount(state);
+    dispatch({ type: 'confirmSolidBlocks', threshold: SOLID_THRESHOLD });
+    setNotice(count > 0 ? { kind: 'done', count } : { kind: 'none' });
+  };
+
+  return (
+    <p>
+      <button type="button" className="button" aria-describedby={hintId} onClick={confirm}>
+        {t('week.confirmSolid')}
+      </button>{' '}
+      <span id={hintId} className="visually-hidden">
+        {t('week.confirmSolidHint', { threshold: Math.round(SOLID_THRESHOLD * 100) })}
+      </span>
+      <span aria-live="polite">
+        {notice === null
+          ? ''
+          : notice.kind === 'done'
+            ? t('week.confirmSolidDone', { count: notice.count })
+            : t('week.confirmSolidNone')}
+      </span>
+    </p>
   );
 }
 

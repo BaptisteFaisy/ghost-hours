@@ -323,4 +323,12 @@ export const fr: Dictionary = {
 
   // --- calcul lourd hors du fil principal (idée R-01) ---
   'app.busy': 'Reconstitution en cours…',
+
+  // --- avertissement de stockage (idée R-09) ---
+  'settings.storageIndexeddb': 'Les données sont conservées dans ce navigateur (stockage persistant).',
+  'settings.storageLocal': 'Le stockage persistant est limité ici : les données vivent dans localStorage et peuvent être purgées.',
+  'settings.storageMemory': 'Aucun stockage inscriptible dans ce navigateur (navigation privée ?) : les données ne survivront pas à la fermeture de l’onglet.',  // --- sévérité d'une objection (mot visible, jamais la seule couleur) ---
+  'objection.severity.high': 'Élevée',
+  'objection.severity.medium': 'Moyenne',
+  'objection.severity.low': 'Faible',
 };

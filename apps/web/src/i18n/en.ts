@@ -324,6 +324,14 @@ export const en = {
 
   // --- bulk work off the main thread (idea R-01) ---
   'app.busy': 'Reconstructing…',
+
+  // --- storage warning (idea R-09) ---
+  'settings.storageIndexeddb': 'Data is kept in this browser (persistent storage).',
+  'settings.storageLocal': 'Persistent storage is restricted here: data lives in localStorage and may be evicted.',
+  'settings.storageMemory': 'No writable storage in this browser (private mode?): the data will not survive closing the tab.',  // --- objection severity (visible word, never colour alone) ---
+  'objection.severity.high': 'High',
+  'objection.severity.medium': 'Medium',
+  'objection.severity.low': 'Low',
 } as const;
 
 export type MessageKey = keyof typeof en;
