@@ -16,22 +16,29 @@ import rawEvidence from './evidence.json';
 const sample = loadSampleMonth();
 const period = monthRangeInZone(sample.expected.period.year, sample.expected.period.month, sample.settings.timeZone);
 
-function reconstruct() {
+/** The whole pipeline, exactly as the app runs it (D.7 P1 to P4). */
+function readSources() {
   const calendar = parseIcs(sample.calendarIcs, { defaultTimeZone: sample.settings.timeZone });
-  expect(calendar.ok).toBe(true);
   if (!calendar.ok) throw new Error(calendar.errors.join('; '));
   const meetings = toEvidence(
     expandRecurring(calendar.value.events, period, { defaultTimeZone: sample.settings.timeZone }),
   );
   const notes = parseNotes([...sample.notes], { defaultTimeZone: sample.settings.timeZone });
-  const raw = [...sample.evidence, ...meetings, ...notes.evidence];
-  const mapped = applyRules(raw, sample.clients);
+  return { calendar, meetings, notes };
+}
+
+function reconstruct() {
+  const { meetings, notes } = readSources();
+  const mapped = applyRules([...sample.evidence, ...meetings, ...notes.evidence], sample.clients);
   expect(mapped.orphans).toHaveLength(0);
-  return sessionize({
-    evidence: mapped.mapped,
-    clients: sample.clients,
-    settings: sample.settings,
-  });
+  return sessionize({ evidence: mapped.mapped, clients: sample.clients, settings: sample.settings });
+}
+
+function countedMinutes(blocks: readonly { status: string; start: number; end: number }[], clientId?: string): number {
+  return blocks
+    .filter((block) => block.status !== 'conflict' && block.status !== 'rejected')
+    .filter((block) => clientId === undefined || (block as { clientId?: string }).clientId === clientId)
+    .reduce((sum, block) => sum + (block.end - block.start) / 60_000, 0);
 }
 
 describe('the sample month (spec D.17)', () => {
@@ -50,26 +57,21 @@ describe('the sample month (spec D.17)', () => {
   });
 
   it('maps every piece of evidence to a client', () => {
-    const calendar = parseIcs(sample.calendarIcs, { defaultTimeZone: sample.settings.timeZone });
-    if (!calendar.ok) throw new Error(calendar.errors.join('; '));
-    const meetings = toEvidence(
-      expandRecurring(calendar.value.events, period, { defaultTimeZone: sample.settings.timeZone }),
-    );
-    const notes = parseNotes([...sample.notes], { defaultTimeZone: sample.settings.timeZone });
+    const { meetings, notes } = readSources();
     const mapped = applyRules([...sample.evidence, ...meetings, ...notes.evidence], sample.clients);
     expect(mapped.orphans).toHaveLength(0);
+    expect(mapped.mapped.length).toBe(sample.evidence.length + meetings.length + notes.evidence.length);
   });
 
   it('reconstructs exactly the announced hours', () => {
     const result = reconstruct();
-    const counted = result.blocks.filter((block) => block.status !== 'conflict' && block.status !== 'rejected');
-    const total = counted.reduce((sum, block) => sum + (block.end - block.start) / 60_000, 0);
-    expect(Math.round(total)).toBe(sample.expected.foundMinutes);
+    expect(Math.round(countedMinutes(result.blocks))).toBe(sample.expected.foundMinutes);
+  });
+
+  it('reconstructs each client to the announced hours', () => {
+    const result = reconstruct();
     for (const [clientId, expected] of Object.entries(sample.expected.perClient)) {
-      const own = counted
-        .filter((block) => block.clientId === clientId)
-        .reduce((sum, block) => sum + (block.end - block.start) / 60_000, 0);
-      expect(Math.round(own)).toBe(expected.foundMinutes);
+      expect(Math.round(countedMinutes(result.blocks, clientId))).toBe(expected.foundMinutes);
     }
   });
 

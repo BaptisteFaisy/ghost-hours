@@ -84,7 +84,6 @@ const CODE_EXTENSIONS = Object.freeze(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.c
 
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)/g;
 const URL_RE = /[a-z][a-z0-9+.-]*:\/\/([A-Za-z0-9.-]+)/gi;
-const QUOTED_RE = /(['"`])((?:\\.|(?!\1)[^\\])*)\1/g;
 const DOMAIN_RE = /\b(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,24}\b/g;
 
 const USAGE = {

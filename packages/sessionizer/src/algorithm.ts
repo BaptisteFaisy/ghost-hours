@@ -4,7 +4,6 @@ import type {
   Evidence,
   Instant,
   Minutes,
-  ReconstructionResult,
   ReconstructionSettings,
 } from '@ghost-hours/core';
 import { conflictId, minutesToMs } from '@ghost-hours/core';
@@ -48,70 +47,105 @@ import type { SessionizeInput, SessionizeResult } from './public-types.ts';
  *    declared, not proven; the user still confirms them.
  */
 
-export function sessionize(input: SessionizeInput): SessionizeResult {
-  const frozen = new Set([...(input.lockedBlocks ?? []), ...(input.adjustedBlocks ?? [])].flatMap((b) => b.evidenceIds));
-  // Re-importing the same file must not double anything: ids are the identity.
+interface Pool {
+  readonly mapped: readonly Evidence[];
+  readonly orphans: readonly Evidence[];
+  readonly points: readonly PointProof[];
+  readonly checkouts: readonly Evidence[];
+  readonly meetings: readonly Evidence[];
+  readonly manuals: readonly Evidence[];
+}
+
+/** Steps 1-2: dedupe, drop what the user already decided, split by client. */
+function partition(input: SessionizeInput): { pool: Pool; unique: readonly Evidence[] } {
+  const frozen = new Set(
+    [...(input.lockedBlocks ?? []), ...(input.adjustedBlocks ?? [])].flatMap((block) => block.evidenceIds),
+  );
   const seen = new Set<string>();
   const unique = input.evidence.filter((item) => (seen.has(item.id) ? false : (seen.add(item.id), true)));
-  const pool = unique.filter((item) => !frozen.has(item.id));
-  const mapped = pool.filter((item) => item.clientId !== null);
-  const orphans: Evidence[] = pool.filter((item) => item.clientId === null);
-  const points = mapped.map(toPoint).filter((point): point is PointProof => point !== null);
-  const checkouts = mapped.filter((item) => item.kind === 'checkout');
-  const meetings = mapped.filter((item) => item.kind === 'meeting');
-  const manuals = mapped.filter((item) => item.kind === 'manual');
+  const kept = unique.filter((item) => !frozen.has(item.id));
+  const mapped = kept.filter((item) => item.clientId !== null);
+  return {
+    unique,
+    pool: {
+      mapped,
+      orphans: kept.filter((item) => item.clientId === null),
+      points: mapped.map(toPoint).filter((point): point is PointProof => point !== null),
+      checkouts: mapped.filter((item) => item.kind === 'checkout'),
+      meetings: mapped.filter((item) => item.kind === 'meeting'),
+      manuals: mapped.filter((item) => item.kind === 'manual'),
+    },
+  };
+}
 
-  const built = buildSessions(points, checkouts, input.settings);
-  orphans.push(...built.tooShort.map((point) => point.evidence));
-  const pointsBySession = new Map<string, readonly PointProof[]>();
+export interface Reconstruction {
+  readonly blocks: readonly Block[];
+  readonly conflicts: readonly Conflict[];
+  readonly leftovers: readonly Evidence[];
+}
+
+/** Steps 3-9: sessions, meetings, contradictions, trimming, merging, grading. */
+function reconstruct(
+  pool: Pool,
+  unique: readonly Evidence[],
+  settings: ReconstructionSettings,
+  adjustedBlocks?: readonly Block[],
+): Reconstruction {
+  const built = buildSessions(pool.points, pool.checkouts, settings);
   const sessions = sessionDrafts(built.sessions);
+  const pointsBySession = new Map<string, readonly PointProof[]>();
   built.sessions.forEach((session, index) => {
     const draft = sessions[index];
     if (draft) pointsBySession.set(draftKey(draft), session.points);
   });
 
-  const meetingDrafts = spanDrafts(meetings, 'meeting').sort(compareDrafts);
-  const manualDrafts = spanDrafts(manuals, 'manual').sort(compareDrafts);
+  const meetingDrafts = spanDrafts(pool.meetings, 'meeting').sort(compareDrafts);
+  const manualDrafts = spanDrafts(pool.manuals, 'manual').sort(compareDrafts);
   const contradictions = findContradictions(sessions, pointsBySession, meetingDrafts);
   const conflictKeys = new Set<string>([...contradictions.sessionKeys, ...contradictions.meetingKeys]);
-
   const flaggedMeetings = meetingDrafts.map((draft) =>
     conflictKeys.has(draftKey(draft)) ? { ...draft, conflicted: true } : draft,
   );
-  const trimmed = trimNonConflicting(sessions, pointsBySession, flaggedMeetings, conflictKeys, input.settings);
-  orphans.push(...trimmed.leftover);
-  // A contradiction is never merged away: it stays its own block, and the
-  // session around it is cut in two (the rest of the day still stands).
+
+  const trimmed = trimNonConflicting(sessions, pointsBySession, flaggedMeetings, conflictKeys, settings);
+  // A contradiction is never merged away: it keeps its own block, and the work
+  // around it is cut around the contradiction.
   const conflictedDrafts = [...trimmed.drafts, ...flaggedMeetings].filter((draft) => draft.conflicted === true);
   const mergeable = [
     ...trimmed.drafts.filter((draft) => draft.conflicted !== true),
     ...flaggedMeetings.filter((draft) => draft.conflicted !== true),
     ...manualDrafts,
   ];
-  const merged = [...mergeSameClient(mergeable), ...conflictedDrafts];
-  const evidenceById = new Map<string, Evidence>(pool.map((item) => [item.id, item]));
-  const settled = removeOverlaps(merged, evidenceById);
-  orphans.push(...settled.leftover);
-  const proofByDraft = new Map<string, Interval[]>();
-  for (const draft of settled.drafts) {
-    proofByDraft.set(draftKey(draft), proofOfDraft(draft, evidenceById));
-  }
-  const fresh = finalise({
-    drafts: settled.drafts,
-    proofByDraft,
-    conflictBlockKeys: conflictKeys,
-    adjustedBlocks: input.adjustedBlocks,
-  });
-  const blocks = sortBlocks([...(input.lockedBlocks ?? []), ...(input.adjustedBlocks ?? []), ...fresh]);
+  const evidenceById = new Map<string, Evidence>(unique.map((item) => [item.id, item]));
+  const settled = removeOverlaps([...mergeSameClient(mergeable), ...conflictedDrafts], evidenceById);
+  const proofByDraft = new Map<string, readonly Interval[]>();
+  for (const draft of settled.drafts) proofByDraft.set(draftKey(draft), proofOfDraft(draft, evidenceById));
+
+  return {
+    blocks: finalise({ drafts: settled.drafts, proofByDraft, conflictBlockKeys: conflictKeys, adjustedBlocks }),
+    conflicts: buildConflicts(contradictions.pairs, constituentIndex(settled.drafts)),
+    leftovers: [...built.tooShort.map((point) => point.evidence), ...trimmed.leftover, ...settled.leftover],
+  };
+}
+
+export function sessionize(input: SessionizeInput): SessionizeResult {
+  const { pool, unique } = partition(input);
+  const outcome = reconstruct(pool, unique, input.settings, input.adjustedBlocks);
+  const orphans = [...pool.orphans, ...outcome.leftovers].sort(
+    (a, b) => (a.at ?? a.start ?? 0) - (b.at ?? b.start ?? 0) || a.id.localeCompare(b.id),
+  );
+  const blocks = sortBlocks([
+    ...(input.lockedBlocks ?? []),
+    ...(input.adjustedBlocks ?? []),
+    ...outcome.blocks,
+  ]);
   return {
     blocks,
-    conflicts: buildConflicts(contradictions.pairs, constituentIndex(settled.drafts)),
-    orphanEvidence: orphans.sort(
-      (a, b) => (a.at ?? a.start ?? 0) - (b.at ?? b.start ?? 0) || a.id.localeCompare(b.id),
-    ),
+    conflicts: outcome.conflicts,
+    orphanEvidence: orphans,
     settings: input.settings,
     calibration: calibrate(input.corrections ?? [], input.settings),
-  } satisfies ReconstructionResult & { calibration: ReturnType<typeof calibrate> };
+  };
 }
 
 interface Contradiction {
