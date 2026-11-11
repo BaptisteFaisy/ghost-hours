@@ -13,3 +13,6 @@ evidence-*.json
 .real/
 .env
 .env.*
+# Playwright outputs (videos, traces, screenshots) are build artifacts.
+e2e/artifacts/
+test-results/

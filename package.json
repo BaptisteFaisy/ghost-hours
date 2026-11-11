@@ -2,7 +2,7 @@
   "name": "ghost-hours",
   "version": "0.1.0",
   "private": true,
-  "description": "Ghost Hours — reconstruct the hours you actually worked from Git commits, calendar events and notes, then draft an invoice.",
+  "description": "Ghost Hours \u2014 reconstruct the hours you actually worked from Git commits, calendar events and notes, then draft an invoice.",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -17,10 +17,12 @@
     "build": "pnpm --filter @ghost-hours/collector build && pnpm --filter @ghost-hours/web build",
     "dev": "pnpm --filter @ghost-hours/web dev",
     "preview": "pnpm --filter @ghost-hours/web preview",
-    "collect": "node packages/collector/bin/ghost-hours.mjs collect"
+    "collect": "node packages/collector/bin/ghost-hours.mjs collect",
+    "e2e": "playwright test --config e2e/playwright.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
+    "@playwright/test": "^1.65.0",
     "@types/node": "^22.10.5",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
