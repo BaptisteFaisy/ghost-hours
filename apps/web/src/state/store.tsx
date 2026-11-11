@@ -2,12 +2,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import type { ReactNode } from 'react';
 import { DEFAULT_SETTINGS, buildDataset, dayKeyInZone, monthOfInZone, resolveSettings, weekDaysInZone } from '@ghost-hours/core';
 import type { Block, Client, Dataset, Evidence } from '@ghost-hours/core';
-import { parseIcs, toEvidence } from '@ghost-hours/ics';
 import { parseNotes } from '@ghost-hours/notes';
 import { removeRule, upsertRule } from '@ghost-hours/mapping';
 import { loadSampleMonth } from '@ghost-hours/fixture-sample-month';
 import { mergeEvidence, reconstruct } from './reconstruct.ts';
 import { clearState, loadState, saveState } from './persistence.ts';
+import { calendarEvidence } from './calendar.ts';
 import type { PersistedState } from './persistence.ts';
 import { DEFAULT_ACTIVE_MONTH, initialState } from './types.ts';
 import type { AppAction, AppState } from './types.ts';
@@ -50,6 +50,7 @@ function withReconstruction(state: AppState, patch: Partial<AppState> = {}): App
     status: 'ready',
     blocks: outcome.blocks,
     conflicts: outcome.conflicts,
+    calibration: outcome.calibration,
     orphanEvidence: outcome.orphans,
     evidence: merged,
   };
@@ -155,6 +156,7 @@ function loadSample(state: AppState): AppState {
     evidence: outcome.evidence,
     blocks: outcome.blocks,
     conflicts: outcome.conflicts,
+    calibration: outcome.calibration,
     orphanEvidence: outcome.orphans,
     declaredMinutes: { ...sample.declaredMinutes },
     activeMonth: monthOfEvidence(evidence, state.settings.timeZone),
@@ -162,10 +164,9 @@ function loadSample(state: AppState): AppState {
   };
 }
 
+/** Delegates to `state/calendar.ts`: recurrences are expanded there. */
 function parseCalendarEvidence(ics: string, timeZone: string): readonly Evidence[] {
-  const parsed = parseIcs(ics, { defaultTimeZone: timeZone });
-  if (!parsed.ok) return [];
-  return toEvidence(parsed.value.events, { defaultTimeZone: timeZone });
+  return calendarEvidence(ics, timeZone).evidence;
 }
 
 function parseNoteEvidence(
@@ -187,15 +188,13 @@ function monthOfEvidence(
 }
 
 function importCalendar(state: AppState, ics: string): AppState {
-  const parsed = parseIcs(ics, { defaultTimeZone: state.settings.timeZone });
-  if (!parsed.ok) {
-    return { ...state, importReport: [...state.importReport, ...parsed.errors] };
+  const imported = calendarEvidence(ics, state.settings.timeZone);
+  if (imported.evidence.length === 0) {
+    return { ...state, importReport: [...state.importReport, ...imported.report] };
   }
-  const evidence = toEvidence(parsed.value.events, { defaultTimeZone: state.settings.timeZone });
-  const skipped = parsed.value.skipped.map((item) => `skipped: ${item.reason}`);
   return withReconstruction(state, {
-    evidence: mergeEvidence(state.evidence, evidence),
-    importReport: [...state.importReport, `calendar: ${evidence.length} events`, ...skipped],
+    evidence: mergeEvidence(state.evidence, imported.evidence),
+    importReport: [...state.importReport, ...imported.report],
   });
 }
 

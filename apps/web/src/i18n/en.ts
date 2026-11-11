@@ -215,6 +215,8 @@ export const en = {
   'invoice.nextPeriod': 'Next month',
   'invoice.noClient': 'No client yet — create one on the Clients screen.',
   'invoice.printHint': 'The print dialog is the PDF: nothing is uploaded anywhere.',
+  'invoice.markInvoicedExplain':
+    'Confirmed blocks of this period will be locked: a later reconstruction leaves them untouched.',
   'invoice.exportHint': 'Exports are built in this tab and downloaded by the browser.',
 
   // --- manual entry (HEU-F-05) ---

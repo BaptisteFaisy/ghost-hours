@@ -50,8 +50,11 @@ node packages/collector/bin/ghost-hours.mjs collect ~/code \
   --author you@example.com --since 2026-11-01 --out evidence.json
 ```
 
-Then drop `evidence.json`, your `.ics` export and your notes folder into the app. Nothing is
-uploaded: the files are parsed inside the tab.
+Then open **Settings → Import your own evidence** and drop `evidence.json`, your `.ics` export and
+your Markdown notes on the page — or use the three labelled file inputs if you prefer. Files are
+sorted by what they are, unreadable ones are named with the reason, and nothing is uploaded: every
+byte is parsed inside the tab. Recurring meetings are expanded, all-day and cancelled events are
+set aside and reported.
 
 ## How it is put together
 
