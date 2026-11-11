@@ -1,0 +1,26 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "journal-reminder",
+      "description": "After a spec task finishes, ask the agent to write the journal line while the context is still warm: which Kiro surface was used, what was decided, what proves it. This is the only hook in the project with an agent action, and it costs credits, so it fires once per task, not per file.",
+      "trigger": "PostTaskExecution",
+      "action": {
+        "type": "agent",
+        "prompt": "A spec task just finished. Append ONE dated entry to KIRO_JOURNAL.md (English, at most 6 lines) in this exact shape:\n\n### YYYY-MM-DD — <spec or lot name>\n- Surface: <spec | steering | hook | agent | skill | CLI | IDE> — <what it was used for, one sentence>\n- Decision: <the one decision taken, and the alternative that was rejected>\n- Evidence: <file path or command that proves it, e.g. .kiro/specs/billing/tasks.md 3.2, pnpm vitest run packages/billing>\n- Measured: <a number you actually measured, or TODO(measure) if it needs a real Kiro session>\n\nRules: do not invent a number, do not reformat the rest of the file, do not touch any other file. If the entry would duplicate the previous one for the same spec and the same day, extend that entry instead of adding a new one."
+      },
+      "enabled": true
+    },
+    {
+      "name": "journal-hint-on-stop",
+      "description": "When the session stops, check whether KIRO_JOURNAL.md is older than the spec files. Non-blocking: it prints one reminder and exits 0. The agent action above writes the entry; this command is the safety net when it was skipped.",
+      "trigger": "Stop",
+      "action": {
+        "type": "command",
+        "command": "node scripts/journal-hint.mjs"
+      },
+      "timeout": 60,
+      "enabled": true
+    }
+  ]
+}

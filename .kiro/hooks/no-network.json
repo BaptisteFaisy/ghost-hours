@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "no-network",
+      "description": "Refuse any save in packages/ or apps/ that introduces fetch, XHR, WebSocket, sendBeacon, a CDN script or a VITE_*API* endpoint (HEU-N-01). The app must make zero requests after it loads; this is the guard that keeps that true while the code is being written.",
+      "trigger": "PostFileSave",
+      "matcher": "^(packages|apps)/.*\\.(ts|tsx)$",
+      "action": {
+        "type": "command",
+        "command": "node scripts/check-no-network.mjs"
+      },
+      "timeout": 120,
+      "enabled": true
+    }
+  ]
+}
