@@ -210,6 +210,44 @@ export const en = {
   'a11y.openEvidence': 'Open the evidence of this block',
   'a11y.closePanel': 'Close the evidence panel',
   'a11y.languageSwitch': 'Switch the interface language',
+  // --- invoice: client and period selection (HEU-F-23) ---
+  'invoice.previousPeriod': 'Previous month',
+  'invoice.nextPeriod': 'Next month',
+  'invoice.noClient': 'No client yet — create one on the Clients screen.',
+  'invoice.printHint': 'The print dialog is the PDF: nothing is uploaded anywhere.',
+  'invoice.exportHint': 'Exports are built in this tab and downloaded by the browser.',
+
+  // --- manual entry (HEU-F-05) ---
+  'week.addManual': 'Add a block',
+  'manual.title': 'Add a block by hand',
+  'manual.hint': 'A block you declare: it is marked declarative, never proven.',
+  'manual.date': 'Day',
+  'manual.start': 'Start',
+  'manual.end': 'End',
+  'manual.add': 'Add the block',
+  'manual.invalid': 'The end must come after the start.',
+  'manual.added': 'Block added: {duration}.',
+
+  // --- imports and dataset (HEU-F-01, HEU-F-02, HEU-F-04) ---
+  'settings.importTitle': 'Import your own evidence',
+  'settings.importHint':
+    'Drop evidence.json, an .ics export or your Markdown notes here. They are read inside this tab and never uploaded.',
+  'settings.importDrop': 'Drop the files to import them',
+  'settings.importedEvidence': 'Imported {count} pieces of evidence.',
+  'settings.importedCalendar': 'Imported {count} meetings ({skipped} set aside).',
+  'settings.importedNotes': 'Imported {count} notes ({skipped} set aside).',
+  'settings.importFailed': 'Could not read {name}: {reason}',
+  'settings.importDataset': 'Import a saved dataset (JSON)',
+  'settings.datasetImported': 'Dataset restored.',
+  'settings.datasetRejected': 'Dataset rejected: {reason}',
+  'a11y.fileInput': 'Choose files to import',
+
+  // --- lead-in calibration (HEU-F-17) ---
+  'calibration.title': 'Lead-in calibration',
+  'calibration.notEnough': 'Ten corrections are needed before a suggestion ({samples} so far).',
+  'calibration.suggestion': 'You kept a median lead-in of {minutes} over {samples} corrections.',
+  'calibration.apply': 'Use it as the default lead-in',
+  'calibration.neverAuto': 'Nothing is applied without you clicking.',
 } as const;
 
 export type MessageKey = keyof typeof en;

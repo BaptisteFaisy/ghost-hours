@@ -209,4 +209,42 @@ export const fr: Dictionary = {
   'a11y.openEvidence': 'Ouvrir les preuves de ce bloc',
   'a11y.closePanel': 'Fermer le panneau de preuves',
   'a11y.languageSwitch': 'Changer la langue de l’interface',
+  // --- facture : choix du client et de la période (HEU-F-23) ---
+  'invoice.previousPeriod': 'Mois précédent',
+  'invoice.nextPeriod': 'Mois suivant',
+  'invoice.noClient': 'Aucun client pour l’instant — créez-en un dans l’écran Clients.',
+  'invoice.printHint': 'La boîte d’impression tient lieu de PDF : rien n’est envoyé.',
+  'invoice.exportHint': 'Les exports sont construits dans cet onglet, puis téléchargés par le navigateur.',
+
+  // --- saisie manuelle (HEU-F-05) ---
+  'week.addManual': 'Ajouter un bloc',
+  'manual.title': 'Ajouter un bloc à la main',
+  'manual.hint': 'Un bloc que vous déclarez : il est marqué déclaratif, jamais prouvé.',
+  'manual.date': 'Jour',
+  'manual.start': 'Début',
+  'manual.end': 'Fin',
+  'manual.add': 'Ajouter le bloc',
+  'manual.invalid': 'La fin doit suivre le début.',
+  'manual.added': 'Bloc ajouté : {duration}.',
+
+  // --- imports et jeu de données (HEU-F-01, HEU-F-02, HEU-F-04) ---
+  'settings.importTitle': 'Importer vos propres preuves',
+  'settings.importHint':
+    'Déposez evidence.json, un export .ics ou vos notes Markdown ici. Ils sont lus dans cet onglet et jamais envoyés.',
+  'settings.importDrop': 'Déposez les fichiers pour les importer',
+  'settings.importedEvidence': '{count} preuves importées.',
+  'settings.importedCalendar': '{count} réunions importées ({skipped} mises de côté).',
+  'settings.importedNotes': '{count} notes importées ({skipped} mises de côté).',
+  'settings.importFailed': 'Lecture impossible de {name} : {reason}',
+  'settings.importDataset': 'Importer un jeu de données sauvegardé (JSON)',
+  'settings.datasetImported': 'Jeu de données restauré.',
+  'settings.datasetRejected': 'Jeu de données refusé : {reason}',
+  'a11y.fileInput': 'Choisir les fichiers à importer',
+
+  // --- calibrage de l’amorce (HEU-F-17) ---
+  'calibration.title': 'Calibrage de l’amorce',
+  'calibration.notEnough': 'Dix corrections sont nécessaires avant une suggestion ({samples} pour l’instant).',
+  'calibration.suggestion': 'Vous avez retenu une amorce médiane de {minutes} sur {samples} corrections.',
+  'calibration.apply': 'L’utiliser comme amorce par défaut',
+  'calibration.neverAuto': 'Rien n’est appliqué sans votre clic.',
 };
