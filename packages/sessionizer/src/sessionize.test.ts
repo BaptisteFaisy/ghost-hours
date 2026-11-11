@@ -124,7 +124,7 @@ describe('sessionize — meetings, overlaps, conflicts (D.5 steps 6-8)', () => {
   });
 });
 
-describe('sessionize — prudence, locks, orphans (D.5 step 9, HEU-F-29)', () => {
+describe('sessionize — prudence and leftovers (D.5 step 9)', () => {
   it('drops a session shorter than minSession and lists its proofs', () => {
     const tight = resolveSettings({ timeZone: TZ, leadInDefaultMinutes: 1, minSessionMinutes: 15 });
     const result = sessionize({ clients: CLIENTS, settings: tight, evidence: [commit('c1', at(3, 10)), commit('c2', at(3, 10, 5))] });
@@ -132,6 +132,9 @@ describe('sessionize — prudence, locks, orphans (D.5 step 9, HEU-F-29)', () =>
     expect(result.orphanEvidence.map((item) => item.id)).toEqual(['c1', 'c2']);
   });
 
+});
+
+describe('sessionize — locks, calibration, determinism (HEU-F-29, HEU-F-16)', () => {
   it('keeps locked blocks untouched and out of the computation', () => {
     const locked = lockedBlock(at(3, 9), at(3, 12), 'acme', ['c1', 'c2']);
     const evidence = [commit('c1', at(3, 9)), commit('c2', at(3, 12)), commit('c3', at(3, 14))];
@@ -140,6 +143,9 @@ describe('sessionize — prudence, locks, orphans (D.5 step 9, HEU-F-29)', () =>
     expect(result.blocks.slice(1).every((block) => !block.evidenceIds.includes('c1'))).toBe(true);
   });
 
+});
+
+describe('sessionize — declared entries and confidence', () => {
   it('marks manual entries as declared and never proven', () => {
     const blocks = sessionize({ ...base, evidence: [manual('h1', at(3, 14), at(3, 16))] }).blocks;
     expect(blocks[0]?.provenShare).toBe(0);

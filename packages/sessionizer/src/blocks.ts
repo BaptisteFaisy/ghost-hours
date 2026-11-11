@@ -190,7 +190,8 @@ export function removeOverlaps(
     for (const piece of pieces) {
       const ids = draft.evidenceIds.filter((id) => covers(piece, evidenceById.get(id)));
       for (const id of ids) assigned.add(id);
-      if (ids.length === 0 && draft.origin === 'git-session') continue;
+      // A piece with no proof inside is pure assumption: it is not proposed.
+      if (ids.length === 0) continue;
       kept.push({ ...draft, start: piece.start, end: piece.end, evidenceIds: ids, conflicted: false });
     }
     // Nothing may vanish: an evidence id that no piece holds is a leftover.
