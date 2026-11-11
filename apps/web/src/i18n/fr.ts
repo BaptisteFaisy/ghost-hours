@@ -291,4 +291,36 @@ export const fr: Dictionary = {
   'audit.verifyOk': 'La chaîne est intacte ({count} entrées).',
   'audit.verifyBroken': 'La chaîne se brise à l’entrée {index} : le journal a été altéré.',
   'audit.empty': 'Aucune décision pour l’instant.',
+  // --- d'où viennent les heures fantômes (idée I-01) ---
+  'month.gapTitle': 'D’où viennent les {hours} heures fantômes',
+  'month.gapEmpty': 'Déclarez les heures dont vous vous souvenez, et l’écart s’explique.',
+  'month.gapUnexplained': 'Non expliqué par ces causes',
+  'gap.evening': 'Soirées et tôt le matin (après 19 h, avant 7 h)',
+  'gap.weekend': 'Week-ends',
+  'gap.meeting': 'Réunions tirées de l’agenda',
+  'gap.assumed': 'Amorces supposées avant la première preuve',
+  'gap.other': 'Autre travail que vous n’avez pas déclaré',
+
+  // --- un geste pour les cas faciles (idée U-17) ---
+  'week.confirmSolid': 'Confirmer tout ce qui est solide',
+  'week.confirmSolidHint':
+    'Confirme les blocs proposés dont la part prouvée atteint au moins {threshold} %, et laisse le reste à votre revue.',
+  'week.confirmSolidDone': '{count} blocs confirmés.',
+  'week.confirmSolidNone': 'Rien d’assez solide pour être confirmé d’un geste.',
+
+  // --- l’avocat du diable (idées I-15, I-14) ---
+  'invoice.objections': 'Ce qu’un client pourrait objecter',
+  'invoice.objectionsNone': 'Rien d’évident : chaque heure facturée est bien prouvée.',
+  'invoice.defensibility': 'Défendabilité',
+  'invoice.defensibilityHint': 'La capacité de ce brouillon à résister à une question du client, sur 100.',
+  'objection.unproven': '{hours} h facturées avec peu de preuve directe ({blocks} blocs).',
+  'objection.assumed': '{hours} h d’amorce supposée, pas du travail prouvé.',
+  'objection.unresolved-conflict': '{count} contradiction(s) encore non tranchée(s).',
+  'objection.annex-too-short': 'L’annexe ne liste que les durées ; ajoutez les preuves pour la rendre vérifiable.',
+  'objection.no-tax-rate': 'Aucun taux de taxe : le total est hors taxes.',
+  'objection.rounding-up': 'L’arrondi se fait toujours au supérieur, par {step} min.',
+  'objection.capped-day': '{days} jour(s) ont atteint le plafond d’une journée.',
+
+  // --- calcul lourd hors du fil principal (idée R-01) ---
+  'app.busy': 'Reconstitution en cours…',
 };

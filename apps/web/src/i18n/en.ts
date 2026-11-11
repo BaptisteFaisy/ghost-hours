@@ -292,6 +292,38 @@ export const en = {
   'audit.verifyOk': 'The chain is intact ({count} entries).',
   'audit.verifyBroken': 'The chain breaks at entry {index}: the log was altered.',
   'audit.empty': 'No decision yet.',
+  // --- where the ghost hours come from (idea I-01) ---
+  'month.gapTitle': 'Where the {hours} ghost hours come from',
+  'month.gapEmpty': 'Declare the hours you remember, and the gap explains itself.',
+  'month.gapUnexplained': 'Not explained by these causes',
+  'gap.evening': 'Evenings and early mornings (after 19:00, before 07:00)',
+  'gap.weekend': 'Weekends',
+  'gap.meeting': 'Meetings taken from the calendar',
+  'gap.assumed': 'Assumed lead-ins before the first proof',
+  'gap.other': 'Other work you did not declare',
+
+  // --- one gesture for the easy cases (idea U-17) ---
+  'week.confirmSolid': 'Confirm everything solid',
+  'week.confirmSolidHint':
+    'Confirms the proposed blocks whose proven share is at least {threshold}%, and leaves the rest for your review.',
+  'week.confirmSolidDone': '{count} blocks confirmed.',
+  'week.confirmSolidNone': 'Nothing solid enough to confirm in one gesture.',
+
+  // --- the devil's advocate (ideas I-15, I-14) ---
+  'invoice.objections': 'What a client could argue',
+  'invoice.objectionsNone': 'Nothing obvious: every billed hour is well proven.',
+  'invoice.defensibility': 'Defensibility',
+  'invoice.defensibilityHint': 'How well this draft would survive a client question, out of 100.',
+  'objection.unproven': '{hours} h billed with little direct proof ({blocks} blocks).',
+  'objection.assumed': '{hours} h of it is an assumed lead-in, not proven work.',
+  'objection.unresolved-conflict': '{count} contradiction(s) still unsettled.',
+  'objection.annex-too-short': 'The annex lists durations only; add the evidence to make it verifiable.',
+  'objection.no-tax-rate': 'No tax rate: the total is exclusive of tax.',
+  'objection.rounding-up': 'Rounding always goes up, by {step} min.',
+  'objection.capped-day': '{days} day(s) reached the one-day cap.',
+
+  // --- bulk work off the main thread (idea R-01) ---
+  'app.busy': 'Reconstructing…',
 } as const;
 
 export type MessageKey = keyof typeof en;
