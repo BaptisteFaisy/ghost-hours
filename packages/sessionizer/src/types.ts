@@ -32,6 +32,10 @@ export interface BlockDraft {
   readonly origin: 'git-session' | 'meeting' | 'merged' | 'manual';
   readonly evidenceIds: readonly string[];
   readonly assumedLeadInMinutes: Minutes;
+  /** Set when a contradiction touched this draft (HEU-F-14). */
+  readonly conflicted?: boolean;
+  /** Draft keys that were merged into this one, for conflict bookkeeping. */
+  readonly constituents?: readonly string[];
 }
 
 export interface Contradiction {

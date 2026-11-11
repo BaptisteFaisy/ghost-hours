@@ -1,0 +1,35 @@
+{
+  "period": {
+    "year": 2026,
+    "month": 11
+  },
+  "timeZone": "Europe/Paris",
+  "foundMinutes": 6240,
+  "confirmedMinutes": 0,
+  "declaredMinutes": 5520,
+  "ghostMinutes": 720,
+  "ghostAmountCents": 78000,
+  "perClient": {
+    "acme": {
+      "foundMinutes": 3720,
+      "declaredMinutes": 3000,
+      "ghostMinutes": 720,
+      "ghostAmountCents": 78000
+    },
+    "northwind": {
+      "foundMinutes": 1560,
+      "declaredMinutes": 1560,
+      "ghostMinutes": 0,
+      "ghostAmountCents": 0
+    },
+    "globex": {
+      "foundMinutes": 960,
+      "declaredMinutes": 960,
+      "ghostMinutes": 0,
+      "ghostAmountCents": 0
+    }
+  },
+  "blockCount": 20,
+  "conflictCount": 2,
+  "unprovenBlocks": 3
+}

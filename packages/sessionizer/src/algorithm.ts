@@ -10,8 +10,10 @@ import type {
 import { conflictId, minutesToMs } from '@ghost-hours/core';
 import { makeInterval, overlaps, type Interval } from '@ghost-hours/intervals';
 import {
+  compareDrafts,
   draftKey,
   finalise,
+  removeOverlaps,
   mergeSameClient,
   pointsInside,
   proofIntervals,
@@ -68,25 +70,42 @@ export function sessionize(input: SessionizeInput): SessionizeResult {
     if (draft) pointsBySession.set(draftKey(draft), session.points);
   });
 
-  const meetingDrafts = spanDrafts(meetings, 'meeting');
-  const manualDrafts = spanDrafts(manuals, 'manual');
+  const meetingDrafts = spanDrafts(meetings, 'meeting').sort(compareDrafts);
+  const manualDrafts = spanDrafts(manuals, 'manual').sort(compareDrafts);
   const contradictions = findContradictions(sessions, pointsBySession, meetingDrafts);
   const conflictKeys = new Set<string>([...contradictions.sessionKeys, ...contradictions.meetingKeys]);
 
-  const trimmed = trimNonConflicting(sessions, pointsBySession, meetingDrafts, conflictKeys, input.settings);
+  const flaggedMeetings = meetingDrafts.map((draft) =>
+    conflictKeys.has(draftKey(draft)) ? { ...draft, conflicted: true } : draft,
+  );
+  const trimmed = trimNonConflicting(sessions, pointsBySession, flaggedMeetings, conflictKeys, input.settings);
   orphans.push(...trimmed.leftover);
-  const merged = mergeSameClient([...trimmed.drafts, ...meetingDrafts, ...manualDrafts]);
-  const proofByClient = proofIndex(points, meetingDrafts);
+  // A contradiction is never merged away: it stays its own block, and the
+  // session around it is cut in two (the rest of the day still stands).
+  const conflictedDrafts = [...trimmed.drafts, ...flaggedMeetings].filter((draft) => draft.conflicted === true);
+  const mergeable = [
+    ...trimmed.drafts.filter((draft) => draft.conflicted !== true),
+    ...flaggedMeetings.filter((draft) => draft.conflicted !== true),
+    ...manualDrafts,
+  ];
+  const merged = [...mergeSameClient(mergeable), ...conflictedDrafts];
+  const evidenceById = new Map<string, Evidence>(pool.map((item) => [item.id, item]));
+  const settled = removeOverlaps(merged, evidenceById);
+  orphans.push(...settled.leftover);
+  const proofByDraft = new Map<string, Interval[]>();
+  for (const draft of settled.drafts) {
+    proofByDraft.set(draftKey(draft), proofOfDraft(draft, evidenceById));
+  }
   const fresh = finalise({
-    drafts: merged,
-    proofByClient,
+    drafts: settled.drafts,
+    proofByDraft,
     conflictBlockKeys: conflictKeys,
     adjustedBlocks: input.adjustedBlocks,
   });
   const blocks = sortBlocks([...(input.lockedBlocks ?? []), ...(input.adjustedBlocks ?? []), ...fresh]);
   return {
     blocks,
-    conflicts: buildConflicts(contradictions.pairs),
+    conflicts: buildConflicts(contradictions.pairs, constituentIndex(settled.drafts)),
     orphanEvidence: orphans.sort(
       (a, b) => (a.at ?? a.start ?? 0) - (b.at ?? b.start ?? 0) || a.id.localeCompare(b.id),
     ),
@@ -219,55 +238,80 @@ function trimNonConflicting(
   const leftover: Evidence[] = [];
   const minMs = minutesToMs(settings.minSessionMinutes);
   const cleanMeetings = meetings.filter((meeting) => !conflictKeys.has(draftKey(meeting)));
-  // Meetings have known bounds: they are placed first, in time order.
-  const occupied: Interval[] = cleanMeetings.map((meeting) => makeInterval(meeting.start, meeting.end));
+  // Meetings have known bounds: they are placed first, in time order. Only
+  // another client's meeting may trim a session — a meeting of the same
+  // client is merged with it, not cut out of it.
+  const occupied: { clientId: string; span: Interval }[] = cleanMeetings.map((meeting) => ({
+    clientId: meeting.clientId,
+    span: makeInterval(meeting.start, meeting.end),
+  }));
   const ordered = [...sessions].sort((a, b) => a.start - b.start || a.clientId.localeCompare(b.clientId) || a.end - b.end);
   for (const session of ordered) {
     if (conflictKeys.has(draftKey(session))) {
-      drafts.push(session);
+      drafts.push({ ...session, conflicted: true });
       continue;
     }
-    const removals = occupied.filter((span) => overlaps(span, makeInterval(session.start, session.end)));
+    const removals = occupied
+      .filter((entry) => entry.clientId !== session.clientId)
+      .map((entry) => entry.span)
+      .filter((span) => overlaps(span, makeInterval(session.start, session.end)));
     const result: TrimResult = trimSession(session, pointsBySession.get(draftKey(session)) ?? [], removals, minMs);
     drafts.push(...result.drafts);
     leftover.push(...result.leftover);
     // What this session keeps is taken: a later session cannot claim it.
-    for (const draft of result.drafts) occupied.push(makeInterval(draft.start, draft.end));
+    for (const draft of result.drafts) {
+      occupied.push({ clientId: session.clientId, span: makeInterval(draft.start, draft.end) });
+    }
   }
   return { drafts, leftover };
 }
 
-function proofIndex(
-  points: readonly PointProof[],
-  meetings: readonly BlockDraft[],
-): ReadonlyMap<string, readonly Interval[]> {
-  const byClient = new Map<string, PointProof[]>();
-  for (const point of points) {
-    const clientId = point.evidence.clientId ?? '';
-    const list = byClient.get(clientId) ?? [];
-    list.push(point);
-    byClient.set(clientId, list);
+/**
+ * The proven part of a block: the intervals between its own consecutive proofs,
+ * plus the spans of the meetings it contains. The gap between two blocks is
+ * never proof — a night is not work.
+ */
+function proofOfDraft(draft: BlockDraft, evidenceById: ReadonlyMap<string, Evidence>): Interval[] {
+  const points: PointProof[] = [];
+  const spans: Interval[] = [];
+  for (const id of draft.evidenceIds) {
+    const item = evidenceById.get(id);
+    if (!item) continue;
+    if (typeof item.at === 'number') points.push({ evidence: item, at: item.at });
+    else if (typeof item.start === 'number' && typeof item.end === 'number') {
+      spans.push(makeInterval(item.start, item.end));
+    }
   }
-  const index = new Map<string, Interval[]>();
-  for (const [clientId, own] of byClient) index.set(clientId, proofIntervals(own));
-  for (const meeting of meetings) {
-    const list = index.get(meeting.clientId) ?? [];
-    list.push(makeInterval(meeting.start, meeting.end));
-    index.set(meeting.clientId, list);
+  return [...proofIntervals(points), ...spans];
+}
+
+/** Every draft key (including merged-away ones) points at the block that kept it. */
+function constituentIndex(merged: readonly BlockDraft[]): ReadonlyMap<string, string> {
+  const index = new Map<string, string>();
+  for (const draft of merged) {
+    const key = draftKey(draft);
+    index.set(key, key);
+    for (const constituent of draft.constituents ?? []) index.set(constituent, key);
   }
   return index;
 }
 
-function buildConflicts(pairs: readonly Contradiction[]): Conflict[] {
+function buildConflicts(
+  pairs: readonly Contradiction[],
+  index: ReadonlyMap<string, string>,
+): Conflict[] {
+  const resolve = (key: string | null): string | null => (key ? (index.get(key) ?? key) : null);
   return pairs
     .map((pair) => {
-      const blockIds = [...(pair.sessionKey ? [pair.sessionKey] : []), ...pair.meetingKeys];
+      const blockIds = [resolve(pair.sessionKey), ...pair.meetingKeys.map(resolve)].filter(
+        (id): id is string => id !== null,
+      );
       return {
         id: conflictId(pair.start, pair.end, blockIds),
         start: pair.start,
         end: pair.end,
-        blockIds,
-        evidenceIds: [...pair.evidenceIds],
+        blockIds: [...new Set(blockIds)].sort(),
+        evidenceIds: [...pair.evidenceIds].sort(),
         reason: pair.reason,
         resolved: false,
       } satisfies Conflict;

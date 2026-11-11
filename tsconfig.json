@@ -5,6 +5,9 @@
     "packages/*/src/**/*.tsx",
     "apps/*/src/**/*.ts",
     "apps/*/src/**/*.tsx",
+    "fixtures/*/index.ts",
+    "fixtures/*/*.test.ts",
+    "fixtures/*/*.d.ts",
     "scripts/**/*.mjs",
     "vitest.config.ts",
     "eslint.config.js"

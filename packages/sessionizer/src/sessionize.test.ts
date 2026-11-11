@@ -119,7 +119,8 @@ describe('sessionize — meetings, overlaps, conflicts (D.5 steps 6-8)', () => {
     expect(blocks[0]?.origin).toBe('merged');
     expect(blocks[0]?.start).toBe(at(3, 9));
     expect(blocks[0]?.end).toBe(at(3, 11));
-    expect(blocks[0]?.evidenceIds).toEqual(['m1', 'c1', 'c2']);
+    // Sorted: a merged block never depends on the order the drafts met.
+    expect(blocks[0]?.evidenceIds).toEqual(['c1', 'c2', 'm1']);
   });
 });
 
