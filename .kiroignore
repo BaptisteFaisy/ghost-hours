@@ -1,0 +1,8 @@
+# Kiro must never read real client evidence. Only the fictitious fixtures are
+# in scope (HEU-N-06, steering/privacy.md).
+.real/
+evidence.json
+evidence-*.json
+!fixtures/**/evidence.json
+**/*.ics
+!fixtures/**/*.ics
