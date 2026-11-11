@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "interval-properties",
+      "description": "Run the interval and sessionizer suites, where HEU-P-01 to HEU-P-07 and HEU-P-13 live, every time one of those packages is saved. A property that breaks a minute of billing must break immediately, not at the next CI run.",
+      "trigger": "PostFileSave",
+      "matcher": "packages/(intervals|sessionizer)/.*\\.ts$",
+      "action": {
+        "type": "command",
+        "command": "pnpm vitest run packages/intervals packages/sessionizer"
+      },
+      "timeout": 180,
+      "enabled": true
+    }
+  ]
+}
