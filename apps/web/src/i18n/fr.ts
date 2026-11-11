@@ -83,6 +83,12 @@ export const fr: Dictionary = {
   'week.proven': 'Prouvé',
   'week.noBlocks': 'Aucun bloc sur cette journée.',
   'week.openBlock': 'Ouvrir les preuves de ce bloc',
+  'week.actionConfirm': 'Confirmer',
+  'week.actionReject': 'Rejeter',
+  'week.actionShiftBack': '−15m',
+  'week.actionShiftForward': '+15m',
+  'week.actionSplit': 'Scinder',
+  'week.actionInfo': 'Infos',
 
   'evidence.title': 'Preuves',
   'evidence.empty': 'Sélectionnez un bloc pour voir les preuves qui le fondent.',
