@@ -3,7 +3,7 @@ import { err, ok, parseDayKey } from '@ghost-hours/core';
 
 /** Everything `ghost-hours collect` needs, fully resolved (specification D.7, path P1). */
 export interface CollectOptions {
-  readonly command: 'collect';
+  readonly command: 'collect' | 'watch';
   /** Folders scanned for repositories. */
   readonly dirs: readonly string[];
   /** Author needles: case-insensitive substrings matched against name and email. */
@@ -24,17 +24,25 @@ export interface CollectOptions {
   readonly dryRun: boolean;
   readonly help: boolean;
   readonly version: boolean;
+  /** `watch` only: delay between two collections, in milliseconds. */
+  readonly intervalMs?: number;
+  /** `watch` only: one round then exit (for cron and timers). */
+  readonly once?: boolean;
+  /** `watch` only: file the run log is appended to. */
+  readonly logFile?: string | null;
 }
 
 export const CLI_NAME = 'ghost-hours';
 export const DEFAULT_OUT = 'evidence.json';
 export const DEFAULT_MAX_DEPTH = 4;
 export const MAX_DEPTH_LIMIT = 32;
+export const DEFAULT_INTERVAL = '1h';
 
 export const HELP_TEXT = `Ghost Hours — read-only Git collector
 
 Usage:
   ${CLI_NAME} collect <dir...> [options]
+  ${CLI_NAME} watch <dir...> [options]
 
 Scans the given folders for Git repositories, reads the commits of the selected
 authors on every reference plus the reference journal (reflog), and writes an
@@ -55,6 +63,14 @@ Options:
                          (default: this machine's zone)
   --json                 print the evidence file on stdout instead of writing it
   --dry-run              list repositories and count evidence, write nothing
+
+Watch only (same options as collect, plus):
+  --interval <30s|15m|2h>  delay between two collections (default: ${DEFAULT_INTERVAL})
+  --once                   collect once and exit, for cron and systemd timers
+  --log <file>             append a timestamped run log to this file
+
+The reference journal expires after a few months and exists only on the machine
+where the work happened: collect regularly, not once at the end of the month.
   --help                 show this help and exit
   --version              print the version and exit
 
@@ -73,9 +89,11 @@ type ValueKey =
   | 'repos'
   | 'excludes'
   | 'maxDepth'
-  | 'timeZone';
+  | 'timeZone'
+  | 'interval'
+  | 'logFile';
 
-type FlagKey = 'summaries' | 'json' | 'dryRun';
+type FlagKey = 'summaries' | 'json' | 'dryRun' | 'once';
 
 const VALUE_OPTIONS: Readonly<Record<string, ValueKey>> = {
   '--author': 'authors',
@@ -86,12 +104,15 @@ const VALUE_OPTIONS: Readonly<Record<string, ValueKey>> = {
   '--exclude': 'excludes',
   '--max-depth': 'maxDepth',
   '--timezone': 'timeZone',
+  '--interval': 'interval',
+  '--log': 'logFile',
 };
 
 const FLAG_OPTIONS: Readonly<Record<string, FlagKey>> = {
   '--no-summaries': 'summaries',
   '--json': 'json',
   '--dry-run': 'dryRun',
+  '--once': 'once',
 };
 
 interface ParseState {
@@ -107,6 +128,9 @@ interface ParseState {
   json: boolean;
   dryRun: boolean;
   timeZone: string;
+  interval: string;
+  once: boolean;
+  logFile: string | null;
 }
 
 /** The zone of the machine running the collection (HEU-N-02: always explicit). */
@@ -153,12 +177,32 @@ function emptyState(): ParseState {
     json: false,
     dryRun: false,
     timeZone: defaultTimeZone(),
+    interval: DEFAULT_INTERVAL,
+    once: false,
+    logFile: null,
   };
 }
 
-function toOptions(state: ParseState, help: boolean, version: boolean): CollectOptions {
+/** `30s`, `15m`, `2h`, or a bare number of minutes — `null` when unusable. */
+export function parseInterval(text: string): number | null {
+  const match = /^(\d+(?:\.\d+)?)\s*(s|m|h)?$/.exec(text.trim().toLowerCase());
+  if (match === null) return null;
+  const value = Number(match[1]);
+  const unit = match[2] ?? 'm';
+  if (!Number.isFinite(value) || value <= 0) return null;
+  const factor = unit === 's' ? 1_000 : unit === 'h' ? 3_600_000 : 60_000;
+  return Math.round(value * factor);
+}
+
+function toOptions(
+  state: ParseState,
+  help: boolean,
+  version: boolean,
+  command: 'collect' | 'watch' = 'collect',
+): CollectOptions {
+  const intervalMs = parseInterval(state.interval);
   return {
-    command: 'collect',
+    command,
     dirs: [...state.dirs],
     authors: [...state.authors],
     sinceDayKey: state.sinceDayKey,
@@ -173,12 +217,16 @@ function toOptions(state: ParseState, help: boolean, version: boolean): CollectO
     dryRun: state.dryRun,
     help,
     version,
+    intervalMs: intervalMs ?? undefined,
+    once: state.once,
+    logFile: state.logFile,
   };
 }
 
 function applyFlag(key: FlagKey, state: ParseState): void {
   if (key === 'summaries') state.summaries = false;
   else if (key === 'json') state.json = true;
+  else if (key === 'once') state.once = true;
   else state.dryRun = true;
 }
 
@@ -196,6 +244,16 @@ function applyScalarValue(
   switch (key) {
     case 'out':
       state.out = value;
+      return;
+    case 'interval':
+      if (parseInterval(value) === null) {
+        errors.push(`${name} expects a duration such as 30s, 15m or 2h, got: ${value}`);
+        return;
+      }
+      state.interval = value;
+      return;
+    case 'logFile':
+      state.logFile = value;
       return;
     case 'timeZone':
       if (!isTimeZone(value)) {
@@ -289,8 +347,8 @@ function finalize(
 ): ParseResult<CollectOptions> {
   if (command === null) {
     errors.push(`missing command: expected "${CLI_NAME} collect <dir...>"`);
-  } else if (command !== 'collect') {
-    errors.push(`unknown command: ${command} (only "collect" exists)`);
+  } else if (command !== 'collect' && command !== 'watch') {
+    errors.push(`unknown command: ${command} (expected "collect" or "watch")`);
   }
   if (state.dirs.length === 0 && state.repos.length === 0) {
     errors.push('nothing to scan: pass at least one directory or --repo <path>');
@@ -303,7 +361,7 @@ function finalize(
     errors.push(`--since ${state.sinceDayKey} is after --until ${state.untilDayKey}`);
   }
   if (errors.length > 0) return err(...errors);
-  return ok(toOptions(state, false, false));
+  return ok(toOptions(state, false, false, command === 'watch' ? 'watch' : 'collect'));
 }
 
 /**
