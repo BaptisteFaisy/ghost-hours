@@ -1,12 +1,15 @@
 name: CI
 
-# CI générique pour un dépôt de thèses/docs : contrôles rapides, stdlib
-# uniquement, verdict en quelques secondes. Le check publié s'appelle `ci`
-# (c'est le nom du job qui nomme le check) : il est exigé par le ruleset de
-# `main` et par la file Mergify, comme `ci-budget` et `couche0`.
+# Verdict in five minutes at most, from the first job started to the last
+# finished (hard project rule). One job, six steps: types, lint, tests, build,
+# contest compliance, and the self-tests of the CI guards.
+#
+# The check published by this workflow is named `ci` (a job names its check):
+# it is required by the `main` ruleset and by the Mergify queue, together with
+# `ci-budget` and `couche0`.
 on:
   pull_request:
-  # File de merge : même contrôle sur le commit temporaire du groupe.
+  # Merge queue: the same control on the group's temporary commit.
   merge_group:
   workflow_dispatch:
 
@@ -29,45 +32,60 @@ jobs:
           persist-credentials: false
           clean: false
 
-      # Runners self-hosted persistants : un sous-dossier parasite d'un run
-      # précédent peut survivre et fausser le sanity docs (flaky constaté sur
-      # les dépôts frères). Nettoyage complet du workspace — pas de sorties
-      # de build à préserver sur ce dépôt docs ; si un jour il y a des
-      # builds, exclure leurs dossiers ici comme vision (`-e`).
-      - name: Nettoyage du workspace
+      # Persistent workspace: a leftover folder from a previous run can fool a
+      # test. Full clean; nothing to preserve (the store lives outside).
+      - name: Clean workspace
         shell: bash
         run: git clean -ffdx
 
-      - name: Sanity docs (UTF-8, non vides)
-        run: |
-          python3 - <<'EOF'
-          import pathlib
-          racines = [pathlib.Path(".")]
-          exts = {".md", ".mdx", ".txt"}
-          vides, illisibles, total = [], [], 0
-          for racine in racines:
-              for f in sorted(racine.rglob("*")):
-                  if ".git/" in f.as_posix() or f.suffix.lower() not in exts:
-                      continue
-                  total += 1
-                  try:
-                      contenu = f.read_text(encoding="utf-8")
-                  except (OSError, UnicodeError):
-                      illisibles.append(f.as_posix())
-                      continue
-                  if not contenu.strip():
-                      vides.append(f.as_posix())
-          print("%d doc(s) contrôlé(s)" % total)
-          for f in illisibles:
-              print("::error::illisible en UTF-8 : %s" % f)
-          for f in vides:
-              print("::error::document vide : %s" % f)
-          raise SystemExit(1 if (illisibles or vides) else 0)
-          EOF
+      - name: Toolchain
+        shell: bash
+        run: source .github/ci/toolchain.sh
 
-      # Les gardes de la CI se testent elles-mêmes : couche0 + agents
-      # fireworks — stdlib, quelques secondes, aucun réseau.
-      - name: Tests des gardes CI (couche0, fireworks)
+      - name: Install
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          # Self-hosted runners are persistent: the store lives on the machine,
+          # so an install is a link farm, not a download.
+          pnpm install --frozen-lockfile --prefer-offline --store-dir "$HOME/tools/pnpm-store"
+
+      - name: Types
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm typecheck
+
+      - name: Lint
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm lint
+
+      - name: Tests
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm test
+
+      - name: Build
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm build
+
+      # Contest compliance: `.kiro/` tracked at the root, MIT licence, README,
+      # no real client data, no network call in the shipped code.
+      - name: Contest compliance
+        shell: bash
+        run: |
+          node scripts/check-kiro-tracked.mjs
+          node scripts/check-privacy.mjs
+          node scripts/check-no-network.mjs
+
+      # The guards test themselves: couche0 and the conflict agents.
+      - name: Guard self-tests
+        shell: bash
         run: |
           python3 .github/couche0/test_check_couche0.py
           python3 .github/fireworks/test_conflict_agent.py

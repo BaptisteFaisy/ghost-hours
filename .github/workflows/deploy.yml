@@ -1,0 +1,67 @@
+name: Deploy (GitHub Pages)
+
+# Static hosting for the judges: no account, no server, one URL.
+# Runs outside pull requests (a deploy is not a PR check), on `main` only.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "packages/**"
+      - "fixtures/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: build-site
+    runs-on: [self-hosted, linux, x64, ghost-hours-worker]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          clean: false
+      - name: Clean workspace
+        shell: bash
+        run: git clean -ffdx
+      - name: Toolchain
+        shell: bash
+        run: source .github/ci/toolchain.sh
+      - name: Install
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm install --frozen-lockfile --prefer-offline
+      - name: Build site
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm --filter @ghost-hours/web build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    name: deploy-site
+    needs: build
+    runs-on: [self-hosted, linux, x64, ghost-hours-worker]
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
