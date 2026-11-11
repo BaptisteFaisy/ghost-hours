@@ -1,0 +1,24 @@
+{
+  "name": "@ghost-hours/fixture-sample-month",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "The fictitious month used by the demo and by the acceptance tests. No real client data (HEU-N-06).",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./evidence.json": "./evidence.json",
+    "./expected.json": "./expected.json"
+  },
+  "dependencies": {
+    "@ghost-hours/core": "workspace:*",
+    "@ghost-hours/notes": "workspace:*"
+  },
+  "devDependencies": {
+    "@ghost-hours/ics": "workspace:*",
+    "@ghost-hours/mapping": "workspace:*",
+    "@ghost-hours/sessionizer": "workspace:*"
+  }
+}

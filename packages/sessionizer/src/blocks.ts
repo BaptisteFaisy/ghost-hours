@@ -28,7 +28,10 @@ export function sessionDrafts(sessions: readonly Session[]): BlockDraft[] {
 /** Meetings and manual entries are exact spans: they become drafts as they are. */
 export function spanDrafts(evidence: readonly Evidence[], origin: 'meeting' | 'manual'): BlockDraft[] {
   const drafts: BlockDraft[] = [];
-  for (const item of evidence) {
+  const sorted = [...evidence].sort(
+    (a, b) => (a.start ?? 0) - (b.start ?? 0) || (a.end ?? 0) - (b.end ?? 0) || a.id.localeCompare(b.id),
+  );
+  for (const item of sorted) {
     if (typeof item.start !== 'number' || typeof item.end !== 'number') continue;
     if (item.end <= item.start) continue;
     drafts.push({
@@ -112,6 +115,10 @@ export function trimSession(
   return { drafts: kept, leftover };
 }
 
+function constituentsOf(draft: BlockDraft): readonly string[] {
+  return draft.constituents ?? [draftKey(draft)];
+}
+
 /** Step 8: a meeting and a session of the same client that touch become one. */
 export function mergeSameClient(drafts: readonly BlockDraft[]): BlockDraft[] {
   const merged: BlockDraft[] = [];
@@ -131,8 +138,13 @@ export function mergeSameClient(drafts: readonly BlockDraft[]): BlockDraft[] {
           end: Math.max(current.end, draft.end),
           clientId,
           origin: 'merged',
-          evidenceIds: [...new Set([...current.evidenceIds, ...draft.evidenceIds])],
+          // Sorted: the block must not depend on the order the drafts met.
+          evidenceIds: [...new Set([...current.evidenceIds, ...draft.evidenceIds])].sort(),
           assumedLeadInMinutes: current.assumedLeadInMinutes,
+          // A contradiction survives a merge: the merged block is still in
+          // conflict, and the conflict still points at a real block id.
+          conflicted: current.conflicted === true || draft.conflicted === true,
+          constituents: [...constituentsOf(current), ...constituentsOf(draft)],
         };
         continue;
       }
@@ -142,6 +154,68 @@ export function mergeSameClient(drafts: readonly BlockDraft[]): BlockDraft[] {
     if (current) merged.push(current);
   }
   return merged.sort((a, b) => a.start - b.start || a.clientId.localeCompare(b.clientId));
+}
+
+/**
+ * Last line of defence for HEU-P-01: after trimming and merging, no two
+ * proposed blocks may overlap, whatever the combination of meetings, sessions
+ * and contradictions that produced them. Drafts are taken in time order; each
+ * one loses what an earlier draft already holds. Conflicted drafts are left
+ * untouched: overlapping is exactly what the user has to arbitrate.
+ */
+export function removeOverlaps(
+  drafts: readonly BlockDraft[],
+  evidenceById: ReadonlyMap<string, Evidence>,
+): { drafts: BlockDraft[]; leftover: Evidence[] } {
+  const kept: BlockDraft[] = [];
+  const leftover: Evidence[] = [];
+  const occupied: Interval[] = [];
+  // Contradictions are placed first: they hold their minutes, and the work
+  // around them is cut around the contradiction instead of swallowing it.
+  const ordered = [...drafts].sort(
+    (a, b) => Number(b.conflicted === true) - Number(a.conflicted === true) || compareDrafts(a, b),
+  );
+  for (const draft of ordered) {
+    if (draft.conflicted === true) {
+      kept.push(draft);
+      occupied.push(draftInterval(draft));
+      continue;
+    }
+    const pieces = subtractAll(draftInterval(draft), occupied);
+    if (pieces.length === 0) {
+      leftover.push(...idsToEvidence(draft.evidenceIds, evidenceById));
+      continue;
+    }
+    const assigned = new Set<string>();
+    for (const piece of pieces) {
+      const ids = draft.evidenceIds.filter((id) => covers(piece, evidenceById.get(id)));
+      for (const id of ids) assigned.add(id);
+      if (ids.length === 0 && draft.origin === 'git-session') continue;
+      kept.push({ ...draft, start: piece.start, end: piece.end, evidenceIds: ids, conflicted: false });
+    }
+    // Nothing may vanish: an evidence id that no piece holds is a leftover.
+    leftover.push(...idsToEvidence(draft.evidenceIds.filter((id) => !assigned.has(id)), evidenceById));
+    for (const piece of pieces) occupied.push(piece);
+  }
+  return { drafts: kept, leftover };
+}
+
+function idsToEvidence(ids: readonly string[], byId: ReadonlyMap<string, Evidence>): Evidence[] {
+  const out: Evidence[] = [];
+  for (const id of ids) {
+    const item = byId.get(id);
+    if (item) out.push(item);
+  }
+  return out;
+}
+
+function covers(piece: Interval, item: Evidence | undefined): boolean {
+  if (!item) return false;
+  if (typeof item.at === 'number') return item.at >= piece.start && item.at <= piece.end;
+  if (typeof item.start === 'number' && typeof item.end === 'number') {
+    return item.start >= piece.start && item.end <= piece.end;
+  }
+  return false;
 }
 
 /** Share of the block covered by hard proof, in [0, 1]. */
@@ -159,9 +233,21 @@ function clamp(interval: Interval, bounds: Interval): Interval {
 
 export interface FinaliseInput {
   readonly drafts: readonly BlockDraft[];
-  readonly proofByClient: ReadonlyMap<string, readonly Interval[]>;
+  /** Proof intervals of each draft, keyed by `draftKey`. */
+  readonly proofByDraft: ReadonlyMap<string, readonly Interval[]>;
   readonly conflictBlockKeys: ReadonlySet<string>;
   readonly adjustedBlocks?: readonly Block[];
+}
+
+/** Canonical sort of drafts: the same input always yields the same order. */
+export function compareDrafts(a: BlockDraft, b: BlockDraft): number {
+  return (
+    a.start - b.start ||
+    a.end - b.end ||
+    a.clientId.localeCompare(b.clientId) ||
+    a.origin.localeCompare(b.origin) ||
+    a.evidenceIds.join(',').localeCompare(b.evidenceIds.join(','))
+  );
 }
 
 export function draftKey(draft: BlockDraft): string {
@@ -173,7 +259,7 @@ export function finalise(input: FinaliseInput): Block[] {
   const blocks: Block[] = [];
   for (const draft of input.drafts) {
     const key = draftKey(draft);
-    const proof = input.proofByClient.get(draft.clientId) ?? [];
+    const proof = input.proofByDraft.get(key) ?? [];
     const manual = draft.origin === 'manual';
     const share = manual ? 0 : provenShareOf(draft, proof);
     blocks.push({
@@ -182,7 +268,7 @@ export function finalise(input: FinaliseInput): Block[] {
       end: draft.end,
       clientId: draft.clientId,
       projectId: null,
-      status: manual ? 'proposed' : input.conflictBlockKeys.has(key) ? 'conflict' : 'proposed',
+      status: draft.conflicted === true || input.conflictBlockKeys.has(key) ? 'conflict' : 'proposed',
       origin: draft.origin,
       provenShare: share,
       confidence: manual ? 'to-confirm' : confidenceOf(share * 1000, 1000),
