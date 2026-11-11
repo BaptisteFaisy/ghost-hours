@@ -14,5 +14,8 @@ export default defineConfig({
     environment: 'node',
     reporters: ['default'],
     testTimeout: 20_000,
+    // The collector's hooks create real Git repositories; on a loaded
+    // self-hosted runner a 10-second hook budget flakes (seen once, 2026-11-11).
+    hookTimeout: 30_000,
   },
 });
