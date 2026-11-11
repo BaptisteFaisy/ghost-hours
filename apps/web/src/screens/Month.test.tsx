@@ -83,3 +83,33 @@ describe('Month', () => {
     expect(screen.getAllByText(/2026/).length).toBeGreaterThan(0);
   });
 });
+
+describe('Month — ghost explainer and solid confirmation', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    stubBrowserStorage();
+    clearBrowserStorage();
+  });
+
+  it('explains the 12 ghost hours with at least one cause', async () => {
+    renderMonth();
+    await counter();
+    await screen.findByText('Where the 12 h ghost hours come from');
+    expect(screen.getByText('Meetings taken from the calendar')).toBeDefined();
+  });
+
+  it('confirms the solid blocks in one gesture', async () => {
+    const user = userEvent.setup();
+    renderMonth();
+    const region = await counter();
+    expect(within(region).getByText('0 h')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: 'Confirm everything solid' }));
+    await waitFor(() => {
+      expect(screen.getByText(/\d+ blocks confirmed\./)).toBeDefined();
+    });
+    await waitFor(() => {
+      expect(within(region).queryByText('0 h')).toBeNull();
+    });
+  });
+});

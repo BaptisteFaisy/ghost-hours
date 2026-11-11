@@ -130,18 +130,56 @@ function deleteDb(): Promise<void> {
   });
 }
 
+/**
+ * One accessor for the fallback store: in private browsing Safari (and some
+ * Firefoxes) `localStorage` reads and writes throw, so every call goes through
+ * a probe that returns `null` instead of letting the exception out. The module
+ * then answers `'memory'` and the interface warns that nothing will survive the
+ * tab.
+ */
+
+export type StorageKind = 'indexeddb' | 'localstorage' | 'memory';
+
+let detected: StorageKind | null = null;
+
+function localStorageOrNull(): Storage | null {
+  try {
+    const ls = globalThis.localStorage;
+    const probe = '__ghost_hours_probe__';
+    ls?.setItem(probe, '1');
+    ls?.removeItem(probe);
+    return ls ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Which store the app will actually use, once the first probe has run. */
+export function storageKind(): StorageKind {
+  if (detected !== null) return detected;
+  return indexedDbAvailable() ? 'indexeddb' : localStorageOrNull() !== null ? 'localstorage' : 'memory';
+}
+
 function readLocal(): unknown {
-  const raw = localStorage.getItem(LS_KEY);
+  const ls = localStorageOrNull();
+  if (ls === null) return null;
+  const raw = ls.getItem(LS_KEY);
   if (raw === null) return null;
   return JSON.parse(raw) as unknown;
 }
 
-function writeLocal(value: unknown): void {
-  localStorage.setItem(LS_KEY, JSON.stringify(value));
+function writeLocal(value: unknown): boolean {
+  const ls = localStorageOrNull();
+  if (ls === null) return false;
+  ls.setItem(LS_KEY, JSON.stringify(value));
+  return true;
 }
 
-function clearLocal(): void {
-  localStorage.removeItem(LS_KEY);
+function clearLocal(): boolean {
+  const ls = localStorageOrNull();
+  if (ls === null) return false;
+  ls.removeItem(LS_KEY);
+  return true;
 }
 
 /** Read the raw payload, from IndexedDB when possible, from localStorage otherwise. */
@@ -156,25 +194,33 @@ async function readRaw(): Promise<unknown> {
 
 async function writeRaw(value: unknown): Promise<string[]> {
   if (!indexedDbAvailable()) {
-    try {
-      writeLocal(value);
+    detected = 'localstorage';
+    if (writeLocal(value)) {
+      detected = 'localstorage';
       return [];
-    } catch (error) {
-      return [messageOf(error)];
     }
+    detected = 'memory';
+    return [notWritableMessage()];
   }
+  let failedIdb: string | null = null;
   try {
     await writeDb(value);
+    detected = 'indexeddb';
     return [];
   } catch (error) {
-    // Fall back to localStorage rather than lose the user's work.
-    try {
-      writeLocal(value);
-      return [];
-    } catch (fallbackError) {
-      return [messageOf(error), messageOf(fallbackError)];
-    }
+    failedIdb = messageOf(error);
   }
+  // Fall back rather than lose the user's work.
+  if (writeLocal(value)) {
+    detected = 'localstorage';
+    return [];
+  }
+  detected = 'memory';
+  return [failedIdb ?? 'indexeddb write failed', notWritableMessage()];
+}
+
+function notWritableMessage(): string {
+  return 'no persistent storage is writable in this browser (private mode?) — data lives in memory for this session';
 }
 
 function messageOf(error: unknown): string {
@@ -199,6 +245,7 @@ export function parsePersisted(input: unknown): ParseResult<PersistedState> {
     annexDetail: value.annexDetail,
     activeMonth: { ...value.activeMonth },
     activeWeekStart: value.activeWeekStart,
+    audit: value.audit ?? [],
   });
 }
 
@@ -228,6 +275,7 @@ export async function saveState(state: PersistedState): Promise<ParseResult<null
     annexDetail: state.annexDetail,
     activeMonth: state.activeMonth,
     activeWeekStart: state.activeWeekStart,
+    audit: state.audit ?? [],
   };
   const checked = envelopeSchema.safeParse(payload);
   if (!checked.success) {

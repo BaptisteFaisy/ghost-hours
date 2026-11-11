@@ -6,6 +6,7 @@ import { monthRangeInZone } from '@ghost-hours/core';
 import type { AnnexDay, InvoiceDraft } from '@ghost-hours/core';
 import { annexToCsv, billableBlocks, clipToPeriod, draftToJson, draftToPrintHtml, timesheetCsv } from '@ghost-hours/billing';
 import { downloadText, openPrintWindow } from '../lib/download.ts';
+import { Objections } from '../components/Objections.tsx';
 
 /**
  * The invoice screen (D.11): the draft, its annex, its exports.
@@ -49,6 +50,7 @@ export function Invoice(): JSX.Element {
       <PeriodNav />
       <DraftLines draft={draft} />
       <Totals draft={draft} />
+      <Objections draft={draft} />
       <TaxAndNotes />
       <ExportBar draft={draft} annex={annex} />
       <Annex annex={annex} />

@@ -2,6 +2,9 @@ import { useI18n } from '../i18n/index.ts';
 import { useApp, useDispatch, eraseEverything } from '../state/store.tsx';
 import { ImportPanel } from '../components/ImportPanel.tsx';
 import { AuditLog } from '../components/AuditLog.tsx';
+import { storageKind } from '../state/persistence.ts';
+import type { StorageKind } from '../state/persistence.ts';
+import type { MessageKey } from '../i18n/index.ts';
 import type { ReconstructionSettings } from '@ghost-hours/core';
 
 /**
@@ -23,6 +26,7 @@ export function Settings(): JSX.Element {
       <AutomationPanel />
       <ImportPanel />
       <AuditLog />
+      <StorageNotice />
       <section aria-label={t('settings.data')}>
         <h3>{t('settings.data')}</h3>
         <button type="button" onClick={() => dispatch({ type: 'loadSampleMonth' })}>
@@ -41,6 +45,18 @@ export function Settings(): JSX.Element {
       <p>{`${t('settings.timeZone')}: ${state.settings.timeZone}`}</p>
     </section>
   );
+}
+
+/** Which store the data actually lands in, so private mode is not a silent loss. */
+const STORAGE_MESSAGE: Readonly<Record<StorageKind, MessageKey>> = {
+  indexeddb: 'settings.storageIndexeddb',
+  localstorage: 'settings.storageLocal',
+  memory: 'settings.storageMemory',
+};
+
+function StorageNotice(): JSX.Element {
+  const { t } = useI18n();
+  return <p aria-live="polite">{t(STORAGE_MESSAGE[storageKind()])}</p>;
 }
 
 /**
