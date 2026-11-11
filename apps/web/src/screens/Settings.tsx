@@ -1,6 +1,7 @@
 import { useI18n } from '../i18n/index.ts';
 import { useApp, useDispatch, eraseEverything } from '../state/store.tsx';
 import { ImportPanel } from '../components/ImportPanel.tsx';
+import { AuditLog } from '../components/AuditLog.tsx';
 import type { ReconstructionSettings } from '@ghost-hours/core';
 
 /**
@@ -19,7 +20,9 @@ export function Settings(): JSX.Element {
       <LanguageField />
       <ReconstructionFields />
       <CalibrationPanel />
+      <AutomationPanel />
       <ImportPanel />
+      <AuditLog />
       <section aria-label={t('settings.data')}>
         <h3>{t('settings.data')}</h3>
         <button type="button" onClick={() => dispatch({ type: 'loadSampleMonth' })}>
@@ -82,6 +85,61 @@ function CalibrationPanel(): JSX.Element {
   );
 }
 
+/**
+ * Automation set aside (idea A-01) and the pause threshold (idea A-02): the
+ * two knobs that decide what counts as work, with the list of what the filter
+ * removed — a filter that hides what it dropped is a filter nobody can audit.
+ */
+function AutomationPanel(): JSX.Element {
+  const { t, formatDate, formatTime } = useI18n();
+  const state = useApp();
+  const dispatch = useDispatch();
+  const ignored = state.ignoredEvidence;
+  return (
+    <section aria-label={t('settings.ignoredTitle')}>
+      <h3>{t('settings.ignoredTitle')}</h3>
+      <p>
+        <label htmlFor="ignore-automation">{t('settings.ignoreAutomation')}</label>{' '}
+        <input
+          id="ignore-automation"
+          type="checkbox"
+          checked={state.settings.ignoreAutomation}
+          onChange={(event) =>
+            dispatch({ type: 'setSettings', patch: { ignoreAutomation: event.target.checked } })
+          }
+        />
+      </p>
+      <p aria-live="polite">
+        {ignored.length === 0
+          ? t('settings.ignoredNone')
+          : t('settings.ignoredCount', { count: ignored.length })}
+      </p>
+      {ignored.length > 0 && (
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{t('common.day')}</th>
+              <th scope="col">{t('common.time')}</th>
+              <th scope="col">{t('common.client')}</th>
+              <th scope="col">Author</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ignored.slice(0, 20).map((item) => (
+              <tr key={item.id}>
+                <th scope="row">{item.at === undefined ? '' : formatDate(item.at)}</th>
+                <td>{item.at === undefined ? '' : formatTime(item.at)}</td>
+                <td>{item.repo ?? ''}</td>
+                <td>{item.authorEmail ?? ''}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
 function LanguageField(): JSX.Element {
   const { t, locale, setLocale } = useI18n();
   return (
@@ -102,6 +160,7 @@ function LanguageField(): JSX.Element {
 
 const NUMBER_FIELDS: readonly { label: SettingsKey; key: keyof ReconstructionSettings }[] = [
   { label: 'settings.gapMax', key: 'gapMaxMinutes' },
+  { label: 'settings.breakMax', key: 'breakMaxMinutes' },
   { label: 'settings.leadInDefault', key: 'leadInDefaultMinutes' },
   { label: 'settings.leadInMax', key: 'leadInMaxMinutes' },
   { label: 'settings.minSession', key: 'minSessionMinutes' },
@@ -113,6 +172,7 @@ const NUMBER_FIELDS: readonly { label: SettingsKey; key: keyof ReconstructionSet
 
 type SettingsKey =
   | 'settings.gapMax'
+  | 'settings.breakMax'
   | 'settings.leadInDefault'
   | 'settings.leadInMax'
   | 'settings.minSession'

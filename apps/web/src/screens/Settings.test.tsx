@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AppProvider } from '../state/store.tsx';
 import { I18nProvider } from '../i18n/index.ts';
@@ -127,6 +127,82 @@ describe('Settings — refus, calibration et langue', () => {
     await userEvent.selectOptions(await screen.findByLabelText(/^Language$/), 'fr');
     await waitFor(() => {
       expect(screen.getByRole('region', { name: 'Réglages' })).toBeDefined();
+    });
+  });
+});
+
+describe('Settings — automation filter and decision log (idées A-01, C-06)', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    stubBrowserStorage();
+    clearBrowserStorage();
+  });
+
+  const BOT_EVIDENCE = {
+    version: 1,
+    collected_at: '2026-11-30T18:00:00.000Z',
+    items: [
+      {
+        id: 'git:acme-api:bot0000001',
+        source: 'git',
+        kind: 'commit',
+        at: '2026-11-04T09:00:00.000Z',
+        repo: 'acme-api',
+        summary: 'build(deps): bump zod from 3.24.1 to 3.24.2',
+        authorEmail: 'dependabot[bot]@users.noreply.github.com',
+      },
+      {
+        id: 'git:acme-api:human0001',
+        source: 'git',
+        kind: 'commit',
+        at: '2026-11-04T10:00:00.000Z',
+        repo: 'acme-api',
+        summary: 'Add the export',
+        authorEmail: 'sofia@example.com',
+      },
+    ],
+  };
+
+  it('lists the automation it set aside, and gives it back when asked', async () => {
+    renderSettings();
+    const input = await screen.findByLabelText(/Import evidence/i);
+    await userEvent.upload(input, jsonFile('evidence.json', BOT_EVIDENCE));
+
+    const panel = await screen.findByRole('region', { name: /Set aside as automation/i });
+    await waitFor(() => expect(within(panel).getByText(/1 commits set aside/)).toBeDefined());
+    expect(within(panel).getByText(/dependabot/)).toBeDefined();
+
+    await userEvent.click(within(panel).getByLabelText(/Set aside commits from bots/i));
+    await waitFor(() => expect(within(panel).getByText(/Nothing was set aside/)).toBeDefined());
+  });
+
+});
+
+describe('Settings — decision log and pause threshold', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    stubBrowserStorage();
+    clearBrowserStorage();
+  });
+
+  it('keeps a chained decision log and says the chain is intact', async () => {
+    renderSettings();
+    const panel = await screen.findByRole('region', { name: /Decision log/i });
+    await waitFor(() => {
+      expect(within(panel).getByText(/The chain is intact/)).toBeDefined();
+    });
+    expect(within(panel).getAllByText(/loadSampleMonth/).length).toBeGreaterThan(0);
+  });
+
+  it('exposes the pause threshold that splits a working day', async () => {
+    renderSettings();
+    const field = (await screen.findByLabelText(/Pause that splits a day/i)) as HTMLInputElement;
+    expect(field.value).toBe('60');
+    fireEvent.change(field, { target: { value: '45' } });
+    await waitFor(() => {
+      expect((screen.getByLabelText(/Pause that splits a day/i) as HTMLInputElement).value).toBe('45');
     });
   });
 });
