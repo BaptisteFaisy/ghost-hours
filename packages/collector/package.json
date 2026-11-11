@@ -1,0 +1,21 @@
+{
+  "name": "@ghost-hours/collector",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Read-only Git collector for Ghost Hours: writes evidence.json, never writes to a repository.",
+  "bin": { "ghost-hours": "./bin/ghost-hours.mjs" },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@ghost-hours/core": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2"
+  }
+}
