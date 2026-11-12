@@ -1,6 +1,6 @@
 # Guards — `scripts/`
 
-Four small Node scripts (Node ≥ 22, **standard library only**, no network, no dependency) plus two
+Four guards and one tool (Node ≥ 22, **standard library only**, no network, no dependency) plus two
 shared helper modules that hold the walking and reporting code so no guard copies it. Each script
 holds one promise this project cannot afford to break. Each one is a normal CLI you can run by hand,
 and each one is also called by a Kiro hook in `.kiro/hooks/` and by CI.
@@ -100,6 +100,19 @@ produced. Non-blocking by design (exit 0), because a reminder that fails a sessi
 node scripts/journal-hint.mjs
 node scripts/journal-hint.mjs --strict
 ```
+
+## One tool, not a guard
+
+`anonymize-evidence.mjs` protects no promise by itself: it makes one possible. The repository is
+public, and the most convincing month anybody can show is a real one — so this script takes a real
+`evidence.json` from the collector and replaces every identifying string in it (repository names,
+remotes, branch names, local paths, author address, evidence ids) with deterministic pseudonyms. It
+refuses a file that still carries a commit message. It produced
+[`fixtures/real-month/evidence.json`](../fixtures/real-month/evidence.json); the mapping it prints
+with `--print-map` is the only link back to the real projects and never enters the repository.
+
+Exit 0 written, 1 refused, 2 usage error. Same discipline as the guards: standard library only, no
+network, `--help`, every message in English.
 
 ## Shared code
 

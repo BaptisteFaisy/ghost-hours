@@ -1,0 +1,23 @@
+{
+  "name": "@ghost-hours/fixture-real-month",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "A real month of real work, anonymized by scripts/anonymize-evidence.mjs: instants, rhythm and volumes are genuine, every name is a pseudonym.",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./evidence.json": "./evidence.json",
+    "./expected.json": "./expected.json"
+  },
+  "dependencies": {
+    "@ghost-hours/core": "workspace:*",
+    "@ghost-hours/notes": "workspace:*"
+  },
+  "devDependencies": {
+    "@ghost-hours/mapping": "workspace:*",
+    "@ghost-hours/sessionizer": "workspace:*"
+  }
+}
