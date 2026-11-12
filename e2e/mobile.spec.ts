@@ -23,22 +23,25 @@ async function horizontalOverflow(page: Page): Promise<number> {
   });
 }
 
-/** The widest element that forces the page wider than the screen, if any. */
-async function overflowCulprit(page: Page): Promise<string> {
-  return page.evaluate(() => {
+/**
+ * Every element that sticks out of the screen, widest last. Naming all of them
+ * matters: a WebKit run costs minutes, and fixing one culprit per run would
+ * cost one run per culprit.
+ */
+async function overflowCulprits(page: Page): Promise<string> {
+  const found = await page.evaluate(() => {
     const limit = window.innerWidth;
-    let worst = '';
-    let width = limit;
+    const out: string[] = [];
     for (const node of document.querySelectorAll<HTMLElement>('body *')) {
       const box = node.getBoundingClientRect();
-      if (box.right > width) {
-        width = box.right;
+      if (box.right > limit + 1) {
         const label = node.getAttribute('aria-label') ?? node.className ?? node.tagName;
-        worst = `${node.tagName}.${String(label).slice(0, 60)} right=${Math.round(box.right)}`;
+        out.push(`${node.tagName}.${String(label).slice(0, 50)} right=${Math.round(box.right)}`);
       }
     }
-    return worst === '' ? 'none' : worst;
+    return out;
   });
+  return found.length === 0 ? 'none' : found.slice(-6).join(' ; ');
 }
 
 test('phone 1 — the page boots at 390 px without a blank screen', async ({ page }) => {
@@ -71,7 +74,7 @@ test('phone 3 — nothing sticks out of the screen on any view', async ({ page }
     await gotoView(page, view);
     await page.waitForTimeout(350);
     const overflow = await horizontalOverflow(page);
-    const culprit = overflow > 0 ? await overflowCulprit(page) : 'none';
+    const culprit = overflow > 0 ? await overflowCulprits(page) : 'none';
     expect(overflow, `view ${view} overflows by ${overflow}px (${culprit})`).toBe(0);
   }
 });

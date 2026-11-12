@@ -1,0 +1,36 @@
+/**
+ * The narrow-screen layer.
+ *
+ * Real WebKit on an iPhone 13 caught what Chromium's phone emulation did not:
+ * a table wider than the screen pushes the *page* wider, and the reader ends up
+ * scrolling sideways. WebKit honours a table's min-content width (the month's
+ * per-client table measured 664 px in a 390 px viewport, 274 px of overflow);
+ * Chromium squeezes the cells and the test passed. The page must never scroll
+ * sideways, so the table scrolls inside its own box instead.
+ *
+ * These rules live apart from `theme.css` for the same reason as `notices.css`:
+ * that file is 702 lines, above the 500-line budget the project applies to every
+ * source file, and owes a split (tokens / components / print) that growing it
+ * further would only delay.
+ */
+
+@media (max-width: 720px) {
+  .app-main table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/**
+ * A long token — an email, a repository name, a branch, a path — must never be
+ * what widens a screen. `anywhere` also shrinks the min-content width, which is
+ * what keeps the table above from needing its scrollbar in the first place;
+ * `break-word` is the fallback for engines that do not know `anywhere` yet.
+ * Not phone-only: a 40-character branch name overflows a narrow window too.
+ */
+.app-main {
+  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
+}
