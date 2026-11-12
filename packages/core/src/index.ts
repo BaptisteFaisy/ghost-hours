@@ -6,4 +6,5 @@ export * from './format.ts';
 export * from './format-calendar.ts';
 export * from './result.ts';
 export * from './schema.ts';
+export * from './credibility.ts';
 export * from './wire.ts';
