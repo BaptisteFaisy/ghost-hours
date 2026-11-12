@@ -49,14 +49,18 @@ function AuditTable(props: {
   formatDate: (instant: number) => string;
   formatTime: (instant: number) => string;
 }): JSX.Element {
+  // The headers come from the dictionary like every other word: a table that
+  // stays in English while the rest of the app speaks French is a table that
+  // was never really translated.
+  const { t } = useI18n();
   return (
     <table>
       <thead>
         <tr>
-          <th scope="col">When</th>
-          <th scope="col">Action</th>
-          <th scope="col">Detail</th>
-          <th scope="col">Fingerprint</th>
+          <th scope="col">{t('audit.when')}</th>
+          <th scope="col">{t('audit.action')}</th>
+          <th scope="col">{t('audit.detail')}</th>
+          <th scope="col">{t('audit.fingerprint')}</th>
         </tr>
       </thead>
       <tbody>
