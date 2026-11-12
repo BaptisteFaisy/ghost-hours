@@ -159,3 +159,30 @@ describe('Month — which month is under review, and for whom', () => {
     expect(within(region).getByText('104 h')).toBeDefined();
   });
 });
+
+describe('Month — a month that is only partly declared', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    stubBrowserStorage();
+    clearBrowserStorage();
+  });
+
+  it('says how far the declaration got instead of claiming nothing was typed', async () => {
+    const user = userEvent.setup();
+    renderMonth();
+    const region = await counter();
+    // The sample month arrives fully declared: empty two clients of three.
+    await user.clear(screen.getByLabelText('Declared hours — Northwind'));
+    await user.clear(screen.getByLabelText('Declared hours — Globex'));
+
+    await waitFor(() =>
+      expect(within(region).getByText(/1 of 3 clients declared/)).toBeDefined(),
+    );
+    expect(within(region).queryByText('No declared hours yet')).toBeNull();
+    // What is declared so far is shown, and the total is still refused: a
+    // partial sum would inflate the ghost hours.
+    expect(within(region).getByText(/50 h — 1 of 3/)).toBeDefined();
+    expect(within(region).getByText('Ghost hours').nextElementSibling?.textContent).toBe('—');
+  });
+});
