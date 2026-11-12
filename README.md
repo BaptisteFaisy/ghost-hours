@@ -44,6 +44,10 @@ thin evidence. `fixtures/real-month/real-month.test.ts` recomputes every figure 
 pipeline **and** fails if one identifying string survives. Details and the exact procedure:
 [`fixtures/real-month/`](fixtures/real-month/README.md).
 
+Re-running the whole demonstration — the fixture, the anchor, the tests and the build — is one
+command: [`pnpm demo`](docs/DEMO.md). The numbers cannot drift: the fixture is recomputed by the
+pipeline and the tests refuse a demo that disagrees with the code.
+
 ## Run it locally
 
 ```bash
