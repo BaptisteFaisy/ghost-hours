@@ -1,4 +1,4 @@
-import type { Evidence, Instant } from './types.ts';
+import type { Block, Evidence, Instant } from './types.ts';
 
 /**
  * The fraud signals of one piece of evidence — the part of the tracking system
@@ -81,6 +81,32 @@ export function signedShare(items: readonly Evidence[]): number {
   if (commits.length === 0) return 1;
   const signed = commits.filter((item) => signatureOf(item) === 'G');
   return signed.length / commits.length;
+}
+
+/**
+ * Above this, the assumed start outweighs the proof: the block is mostly the
+ * courtesy the tool grants before a commit, barely the work itself.
+ */
+export const ASSUMED_DOMINANCE = 0.5;
+
+/**
+ * The share of a block that rests on the assumed lead-in rather than on proof.
+ *
+ * A month farmed with commits inflates the *assumed* minutes — never the
+ * proven ones — and a block whose assumed start outweighs its proof is the
+ * visible trace of it. The product does not cap those minutes: a cap would
+ * break the monotonicity guarantee (HEU-P-04, adding a proof never lowers the
+ * reconstructed time), which is a stronger promise than the cap would be.
+ */
+export function assumedShareOfBlock(block: Block): number {
+  const total = Math.max(0, (block.end - block.start) / 60_000);
+  if (total === 0) return 0;
+  return block.assumedLeadInMinutes / total;
+}
+
+/** True when the block is mostly assumed time: a block worth a second look. */
+export function isAssumptionDominant(block: Block): boolean {
+  return assumedShareOfBlock(block) > ASSUMED_DOMINANCE;
 }
 
 /** The instant a commit was committed, or its author instant when unknown. */
