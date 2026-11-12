@@ -207,7 +207,7 @@ export const fr: Dictionary = {
   // --- the real month (October 2026, anonymized fixture) ---
   'real.load': 'Charger un mois réel (anonymisé)',
   'real.notice':
-    'Un vrai mois d’octobre 2026 : 977 preuves sur trois dépôts. Les instants, le rythme et les volumes sont réels ; les noms et les branches sont pseudonymisés, aucun message de commit n’a jamais été lu et le taux horaire est fictif.',
+    'Un vrai mois d’octobre 2026, anonymisé : 977 preuves sur trois dépôts. Les instants, le rythme et les volumes sont réels ; chaque nom est un pseudonyme, aucun message de commit n’a jamais été lu et le taux horaire est fictif.',
 
   'error.persistence': 'Les données n’ont pas pu être enregistrées dans ce navigateur.',
   'error.persistRead': 'Les données enregistrées n’ont pas pu être lues.',

@@ -26,6 +26,24 @@ blocks whose evidence is thin, so every state the reviewer has to tell apart is 
 numbers are not typed anywhere: `fixtures/sample-month/sample-month.test.ts` recomputes them
 through the real pipeline, so they cannot drift from the product.
 
+### And a real month, one click away
+
+**Load a real month (anonymized)** loads October 2026 as it actually happened on the author's machine: 977 proofs
+collected by this project's own collector across three repositories, then passed through
+`scripts/anonymize-evidence.mjs`.
+
+> **34.2 h found · 13 working days · 21 blocks · 7 contradictions · nothing declared**
+
+Every instant, gap and volume is genuine. Repository names, branches, remotes, local paths and the
+author address are pseudonyms, and no commit message was ever read (`--no-summaries`). Nothing is
+declared in it, so the ghost hours appear only once the reader types what they remember working —
+which is the whole point of the product. Being real has consequences a fixture would not dare: the
+three projects ran in parallel, so **seven contradictions are genuine** (18.4 hours two projects
+claim at once — the same evidence read as one client says 52.6 h), and 12 of the 21 blocks rest on
+thin evidence. `fixtures/real-month/real-month.test.ts` recomputes every figure through the real
+pipeline **and** fails if one identifying string survives. Details and the exact procedure:
+[`fixtures/real-month/`](fixtures/real-month/README.md).
+
 ## Run it locally
 
 ```bash
@@ -150,9 +168,13 @@ than invented.
 
 - No network request after the page loads; the evidence stays in IndexedDB (with a `localStorage`
   fallback) and can be erased from the Settings screen.
-- No real client data in this repository: every fixture uses `example.com` / `example.org`
-  addresses and invented companies. `.kiroignore` and `.gitignore` keep real evidence out of the
-  tree, and `scripts/check-privacy.mjs` enforces it in CI.
+- No real client data in this repository. The fictitious month uses `example.com` / `example.org`
+  addresses and invented companies. The **real** month is anonymized before it enters the tree:
+  `scripts/anonymize-evidence.mjs` replaces every repository name, remote, branch, local path,
+  author address and evidence id with a pseudonym under `.invalid` (RFC 2606), refuses a file that
+  still carries a commit message, and prints its mapping on stdout only — never into the repository.
+  `fixtures/real-month/real-month.test.ts` enforces that, and `scripts/check-privacy.mjs` re-checks
+  every domain in the tree in CI.
 - The optional model-assisted suggestion (HEU-F-10) is not wired in: the client suggestion for an
   orphan piece of evidence is purely heuristic, so there is a non-model path for everything.
 

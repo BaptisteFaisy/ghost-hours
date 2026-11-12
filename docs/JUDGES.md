@@ -4,11 +4,33 @@
 network call after the page loads. Works in a private window.
 **Repo:** <https://github.com/BaptisteFaisy/ghost-hours> (MIT).
 
-Open the URL. The empty state offers one button: **Load the sample month** (HEU-F-30). Click it.
+Open the URL. The empty state offers **Load the sample month** (HEU-F-30) and **Load a real month (anonymized)**
+— a fictitious November that tells the story, and a real October that proves the product runs on data
+nobody arranged (see *The real month* below). Click the sample month first.
 It loads a fictitious November 2026 for a fictitious freelancer, Sofia Marquez
 (`sofia@example.com`), with three fictitious clients — Acme (hourly, €65/h), Northwind (daily by
 thresholds, €520/day), Globex (daily proportional, €480/day). Everything below is reachable from
 the six tabs, in this order: **Month → Week → Evidence → Clients → Invoice → Settings**.
+
+## The real month (October 2026, anonymized)
+
+One button, **Load a real month (anonymized)**, loads a month that happened: 977 proofs (605 commits, 372 reflog
+checkouts) collected read-only from three repositories on the author's machine, then anonymized by
+`scripts/anonymize-evidence.mjs`.
+
+| Figure | Value | Note |
+|---|---|---|
+| Found hours | **34.2 h** over 13 working days | the same evidence read as *one* client gives 52.6 h — the difference is the seven contradictions below |
+| Blocks | **21** — 9 solid (proven share ≥ 0.8), 12 to confirm | thin evidence is the normal state of a real month |
+| Contradictions | **7** | 18.4 hours claimed by two projects at once; the product shows them instead of merging them |
+| Assumed lead-ins | 210 minutes, 10 % of the month | bounded, drawn paler, listed per block |
+| Declared hours | **none** | type what you remember on the Month screen: the ghost hours and their amount appear immediately |
+
+What is genuine: every instant, the rhythm of the days and nights, the volumes, the lines touched,
+the branch switches. What is a pseudonym: repository names (`projet-1`…`projet-3`), remotes, branch
+names, local paths, evidence ids, the author address. No commit message was ever collected
+(`--no-summaries`, HEU-N-07), and the hourly rate is a placeholder. `fixtures/real-month/`
+holds the procedure and a test that fails if one identifying string survives.
 
 ## The exact numbers to expect
 

@@ -199,7 +199,7 @@ Long variant:
 | 1:10–1:50 | Week screen: proposed blocks translucent with dashed borders; click *Confirm* on Monday's block, it turns solid; resize Tuesday's lead-in; open Thursday's conflict (two commits inside another client's meeting), keep one side; open a block's evidence: three commits, one checkout, one meeting, stitched. | "Blocks float until you confirm them. The assumed part is drawn paler than the proven part. And when two clients claim the same minutes, the tool shows the contradiction instead of picking a side." |
 | 1:50–2:10 | Invoice screen: lines per project, the rounding rule written out, the **Draft** watermark, the annex per day, then the print dialog producing the PDF. | "Only confirmed blocks reach the draft. It says Draft, it carries no number, and every line links back to the proofs behind it." |
 | 2:10–2:45 | A failing property test in the editor (`HEU-P-01`), then `.kiro/`: the spec with EARS requirements, `time.md` steering, the privacy hook firing on a real domain, `.kiroignore`. | "The properties are named after the requirements they protect. This one found three bugs my unit tests missed. And a guard fails the build if a real client domain ever reaches the repository." |
-| 2:45–3:00 | Terminal: the collector run on Ghost Hours' own repository; the app shows the project's own November. Final frame: the URL and the licence. | "And because the tool reads Git, it can bill its own construction. Ghost Hours — MIT, static, and yours." |
+| 2:45–3:00 | Terminal: `collect --repo … --no-summaries` on a real month, then `anonymize-evidence.mjs` printing `977 item(s), 3 repository(ies), 437 branch name(s) replaced`. Cut to the app: **Load a real month**, 34.2 h found, 7 contradictions, then the declared hours typed by hand and the ghost amount appearing. Final frame: the URL and the licence. | "This last month is not a fixture. Nine hundred and seventy-seven proofs, read-only, names replaced, commit messages never read. Thirty-four hours found, seven real contradictions — and the ghost hours appear only when I type what I remember. Ghost Hours — MIT, static, and yours." |
 
 ### Recording checklist
 
@@ -210,3 +210,5 @@ Long variant:
 - Total runtime under 3:00; export MP4, 1080p, upload public (unlisted is not public).
 - The 2:45 shot is reproducible verbatim:
   `node packages/collector/bin/ghost-hours.mjs collect <this repository> --author <your email>`.
+- The real-month shot shows the anonymizer's own output, which names nothing: never film the
+  `--print-map` table, a real path or a real repository name.

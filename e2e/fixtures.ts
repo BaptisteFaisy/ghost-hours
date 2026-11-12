@@ -39,10 +39,37 @@ const TARGET = process.env.GHOST_HOURS_URL ?? 'http://localhost:4173/ghost-hours
 export const APP_URL = TARGET.endsWith('/') ? TARGET : `${TARGET}/`;
 export const ORIGIN_UNDER_TEST = new URL(APP_URL).origin;
 
+/** `2052` → `34.2 h`, and `6240` → `104 h`: what the month counter prints. */
+function hours(minutes: number): string {
+  return `${(minutes / 60).toFixed(1)} h`.replace(/\.0(\s)/, '$1');
+}
+
 export const HOURS = {
-  found: `${Math.round(EXPECTED.foundMinutes / 60)} h`,
-  declared: `${Math.round(EXPECTED.declaredMinutes / 60)} h`,
-  ghost: `${Math.round(EXPECTED.ghostMinutes / 60)} h`,
+  found: hours(EXPECTED.foundMinutes),
+  declared: hours(EXPECTED.declaredMinutes),
+  ghost: hours(EXPECTED.ghostMinutes),
+};
+
+/**
+ * The real month of `fixtures/real-month`: the same rule as for the sample —
+ * the figures the suite asserts come from the fixture, never from a literal.
+ */
+export const REAL_EXPECTED = JSON.parse(
+  readFileSync(new URL('../fixtures/real-month/expected.json', `file://${here}`), 'utf8'),
+) as {
+  readonly foundMinutes: number;
+  readonly blockCount: number;
+  readonly conflictCount: number;
+  readonly evidenceCount: number;
+  readonly activeDays: number;
+};
+
+export const REAL = {
+  found: hours(REAL_EXPECTED.foundMinutes),
+  blocks: REAL_EXPECTED.blockCount,
+  conflicts: REAL_EXPECTED.conflictCount,
+  evidence: REAL_EXPECTED.evidenceCount,
+  days: REAL_EXPECTED.activeDays,
 };
 
 /** 78000 cents in en-GB currency formatting: "€780.00". */

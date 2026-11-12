@@ -57,8 +57,8 @@ const asked =
 
 const selected = new Set<string>(asked);
 
-/** The desktop suite: every screen, every gesture, on a 1440×900 viewport. */
-const DESKTOP = { testMatch: /smoke\.spec\.ts/ } as const;
+/** The desktop suites: the fictitious month and the real one, 1440×900. */
+const DESKTOP = { testMatch: /(smoke|real-month)\.spec\.ts/ } as const;
 
 /** The phone suite: the link a judge opens — does it boot, is it readable. */
 const MOBILE = { testMatch: /mobile\.spec\.ts/ } as const;
