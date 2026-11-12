@@ -52,6 +52,13 @@
     min-height: 44px;
   }
 
+  /* WebKit sizes a `<select>` by its content and ignores `min-height`: the client
+     filter measured 23 px tall on Safari where Chromium gave it 44. An explicit
+     height is honoured by both engines. */
+  .app-main select {
+    height: 44px;
+  }
+
   /* The gestures of a block: a glyph is not a target, and 0.62 rem is not a
      label. The grid of the week keeps its compact gestures — a column of the
      timeline is 48 px wide, so the gestures there belong to the table view,
