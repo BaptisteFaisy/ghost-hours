@@ -8,14 +8,14 @@ import { useApp, useDispatch } from '../state/store.tsx';
 import { clientById } from '../state/selectors.ts';
 import { useI18n } from '../i18n/index.ts';
 import type { MessageKey } from '../i18n/index.ts';
-import { useText } from './Evidence.tsx';
-import type { ExtraPair } from './Evidence.tsx';
+import { RULE_KEYS, RuleForm } from '../components/RuleForm.tsx';
 
 /**
  * The clients screen (D.4, HEU-F-07/08/09, D.7 P3).
  *
  * Three things live here: the clients with their billing terms and the rules
- * that claim proofs for them; the proofs no rule claims yet, each one with the
+ * that claim proofs for them — suggested by the heuristics or written by hand
+ * on the client card; the proofs no rule claims yet, each one with the
  * clients the heuristics believe plausible and the gesture that writes the rule
  * in one move; and the form that adds a client. Associating a proof re-runs the
  * reconstruction in the store, so the proof leaves the orphan list by itself.
@@ -36,25 +36,6 @@ const SCOPE_KEYS: Readonly<Record<RoundingScope, MessageKey>> = {
   session: 'clients.scopeSession',
   day: 'clients.scopeDay',
   total: 'clients.scopeTotal',
-};
-
-/** Keys the dictionaries do not carry yet — they are reported, not invented. */
-const EXTRA: Readonly<Record<string, ExtraPair>> = {
-  'rule.repo': { en: 'Repository', fr: 'Dépôt' },
-  'rule.remote-contains': { en: 'Remote contains', fr: 'Le distant contient' },
-  'rule.attendee-domain': { en: 'Attendee domain', fr: 'Domaine de participant' },
-  'rule.title-contains': { en: 'Title contains', fr: 'Le titre contient' },
-  'rule.note-tag': { en: 'Note tag', fr: 'Étiquette de note' },
-  'rule.manual': { en: 'Manual', fr: 'Manuel' },
-  'clients.projects': { en: 'Projects', fr: 'Projets' },
-  'clients.projectsHint': { en: 'Comma separated names.', fr: 'Noms séparés par des virgules.' },
-  'clients.nameRequired': { en: 'The name of the client is required.', fr: 'Le nom du client est obligatoire.' },
-  'clients.rateRequired': {
-    en: 'The hourly rate must be a positive amount.',
-    fr: 'Le taux horaire doit être un montant positif.',
-  },
-  'clients.associate': { en: 'Associate to this client', fr: 'Associer à ce client' },
-  'clients.noOrphans': { en: 'Every proof has a client.', fr: 'Chaque preuve a un client.' },
 };
 
 export function Clients(): JSX.Element {
@@ -93,7 +74,6 @@ function ClientCard(props: {
   readonly onChange: (client: Client) => void;
 }): JSX.Element {
   const { t, formatMoney } = useI18n();
-  const text = useText(EXTRA);
   const client = props.client;
   const projects = client.projects.map((project) => project.name).join(', ');
   return (
@@ -104,10 +84,11 @@ function ClientCard(props: {
         <Term label={t('clients.rate')} value={formatMoney(client.rateCents, client.currency)} numeric />
         <Term label={t('clients.dayRate')} value={formatMoney(client.dayRateCents, client.currency)} numeric />
         <Term label={t('clients.currency')} value={client.currency} />
-        <Term label={text('clients.projects')} value={projects.length === 0 ? t('common.none') : projects} />
+        <Term label={t('clients.projects')} value={projects.length === 0 ? t('common.none') : projects} />
       </dl>
       <RoundingEditor client={client} onChange={props.onChange} />
       <RuleList rules={client.rules} onRemove={props.onRemoveRule} />
+      <RuleForm clientId={client.id} />
     </li>
   );
 }
@@ -161,7 +142,6 @@ function RuleList(props: {
   readonly onRemove: (ruleId: string) => void;
 }): JSX.Element {
   const { t } = useI18n();
-  const text = useText(EXTRA);
   return (
     <div className="client-rules">
       <h4>{t('clients.rules')}</h4>
@@ -181,7 +161,7 @@ function RuleList(props: {
           <tbody>
             {props.rules.map((rule) => (
               <tr key={rule.id}>
-                <td>{text(`rule.${rule.type}`)}</td>
+                <td>{t(RULE_KEYS[rule.type])}</td>
                 <td>{rule.value}</td>
                 <td>
                   <button
@@ -209,12 +189,11 @@ function OrphanList(props: {
 }): JSX.Element {
   const state = useApp();
   const { t } = useI18n();
-  const text = useText(EXTRA);
   return (
     <div className="client-orphans">
       <h3>{t('evidence.orphans')}</h3>
       <p>{t('evidence.orphanHint')}</p>
-      {props.orphans.length === 0 ? <p>{text('clients.noOrphans')}</p> : null}
+      {props.orphans.length === 0 ? <p>{t('clients.noOrphans')}</p> : null}
       <ul className="evidence-list" aria-live="polite" aria-label={t('evidence.orphans')}>
         {props.orphans.map((proof) => (
           <OrphanItem
@@ -266,10 +245,9 @@ function CandidateRow(props: {
   readonly name: string;
   readonly onAssociate: () => void;
 }): JSX.Element {
-  const { locale } = useI18n();
-  const text = useText(EXTRA);
+  const { t, locale } = useI18n();
   const confidence = Math.round(props.candidate.confidence * 100);
-  const label = text('clients.associate');
+  const label = t('clients.associate');
   return (
     <li className="candidate-item">
       <span className="candidate-name">{props.name}</span>
@@ -277,7 +255,13 @@ function CandidateRow(props: {
         {locale === 'fr' ? `${confidence} %` : `${confidence}%`}
       </span>
       <span className="candidate-reason">{props.candidate.reason}</span>
-      <button type="button" className="primary" aria-label={`${label} — ${props.name}`} onClick={props.onAssociate}>
+      <button
+        type="button"
+        className="primary"
+        aria-label={`${label} — ${props.name}`}
+        title={t('clients.suggestRule')}
+        onClick={props.onAssociate}
+      >
         {label}
       </button>
     </li>
@@ -311,15 +295,14 @@ interface FieldHandlers {
 function ClientForm(): JSX.Element {
   const dispatch = useDispatch();
   const { t } = useI18n();
-  const text = useText(EXTRA);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const patch = (change: Partial<FormState>) => setForm((current) => ({ ...current, ...change }));
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     const cents = parseCents(form.rate);
-    if (form.name.trim().length === 0) return patch({ error: text('clients.nameRequired') });
-    if (cents === null) return patch({ error: text('clients.rateRequired') });
+    if (form.name.trim().length === 0) return patch({ error: t('clients.nameRequired') });
+    if (cents === null) return patch({ error: t('clients.rateRequired') });
     dispatch({ type: 'upsertClient', client: toClient(form, cents) });
     setForm(EMPTY_FORM);
   }
@@ -369,7 +352,6 @@ function IdentityFields(props: FieldHandlers): JSX.Element {
 /** Rate, currency and projects of the new client. */
 function TermsFields(props: FieldHandlers): JSX.Element {
   const { t } = useI18n();
-  const text = useText(EXTRA);
   const { form, patch } = props;
   return (
     <>
@@ -391,8 +373,8 @@ function TermsFields(props: FieldHandlers): JSX.Element {
       />
       <TextField
         id="client-projects"
-        label={text('clients.projects')}
-        hint={text('clients.projectsHint')}
+        label={t('clients.projects')}
+        hint={t('clients.projectsHint')}
         value={form.projects}
         onChange={(value) => patch({ projects: value })}
       />
