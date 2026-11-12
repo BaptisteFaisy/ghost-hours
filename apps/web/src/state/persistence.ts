@@ -249,17 +249,24 @@ export function parsePersisted(input: unknown): ParseResult<PersistedState> {
   });
 }
 
+/** Why a load failed: the store could not be read, or what it held was invalid. */
+export type LoadFailureKind = 'read' | 'parse';
+
+export type LoadResult =
+  | { readonly ok: true; readonly value: PersistedState | null }
+  | { readonly ok: false; readonly kind: LoadFailureKind; readonly errors: readonly string[] };
+
 /** Load the persisted state; `null` when nothing was stored yet. */
-export async function loadState(): Promise<ParseResult<PersistedState | null>> {
+export async function loadState(): Promise<LoadResult> {
   let raw: unknown;
   try {
     raw = await readRaw();
   } catch (error) {
-    return err(messageOf(error));
+    return { ok: false, kind: 'read', errors: [messageOf(error)] };
   }
   if (raw === null || raw === undefined) return ok(null);
   const parsed = parsePersisted(raw);
-  if (!parsed.ok) return parsed;
+  if (!parsed.ok) return { ok: false, kind: 'parse', errors: parsed.errors };
   return ok(parsed.value);
 }
 
