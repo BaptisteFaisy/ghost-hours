@@ -134,3 +134,23 @@ describe('the month counter (D.6 / D.7 P4)', () => {
     expect(quantity.quantityMinutes).toBe(6_360);
   });
 });
+
+describe('clientDayQuantities — the cap is structural', () => {
+  it('never returns more than one day for one calendar day, whatever the mode', () => {
+    // Two blocks of six hours on the same day for the same client: 12 h of
+    // evidence, one billable day. The cap is applied inside the selector, so no
+    // caller can forget it.
+    const blocks = [
+      makeBlock({ id: 'cap-a', dayKey: '2026-11-03', clock: '08:00', minutes: 360, clientId: NORTHWIND.id }),
+      makeBlock({ id: 'cap-b', dayKey: '2026-11-03', clock: '14:00', minutes: 360, clientId: NORTHWIND.id }),
+    ];
+    for (const mode of ['daily-thresholds', 'daily-proportional'] as const) {
+      const client = { ...NORTHWIND, mode };
+      const quantities = clientDayQuantities(blocks, client, SETTINGS);
+      expect(quantities).toHaveLength(1);
+      expect(quantities[0]?.quantityDays).toBeLessThanOrEqual(1);
+      expect(quantities[0]?.quantityDays).toBeGreaterThan(0);
+    }
+  });
+});
+

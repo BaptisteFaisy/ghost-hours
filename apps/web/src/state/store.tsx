@@ -545,16 +545,26 @@ export function AppProvider(props: { children: ReactNode }): JSX.Element {
 
   usePersist(state, hydrated, setSaveError);
 
-  const value = useMemo<AppState>(
-    () => (saveError === null ? state : { ...state, importReport: [...state.importReport, saveError] }),
-    [saveError, state],
-  );
+  const value = useMemo<AppState>(() => withStorageWarning(state, saveError), [saveError, state]);
 
   return (
     <AppStateContext.Provider value={value}>
       <AppDispatchContext.Provider value={dispatch}>{props.children}</AppDispatchContext.Provider>
     </AppStateContext.Provider>
   );
+}
+
+/**
+ * Fold a refused write into the state: the raw reason stays in the import
+ * report of the settings screen, and the shell gets a field it can announce.
+ */
+function withStorageWarning(state: AppState, saveError: string | null): AppState {
+  if (saveError === null) return state;
+  return {
+    ...state,
+    importReport: [...state.importReport, saveError],
+    storageWarning: saveError,
+  };
 }
 
 /** The current application state. */

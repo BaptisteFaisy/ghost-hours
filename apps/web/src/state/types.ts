@@ -53,6 +53,12 @@ export interface AppState {
   readonly annexDetail: AnnexDetail;
   /** What was read, what was skipped. */
   readonly importReport: readonly string[];
+  /**
+   * Why the browser refused to keep the data, when it did. Shown by the shell
+   * as an alert: a review that will not survive a reload must say so up front,
+   * not only in the import report of the settings screen.
+   */
+  readonly storageWarning?: string | null;
   /** Lead-in calibration proposal (HEU-F-17); null until there are ten corrections. */
   readonly calibration: Calibration | null;
   /** Local, chained audit trail of every decision (never leaves the browser). */
@@ -130,6 +136,7 @@ export function initialState(settings: ReconstructionSettings): AppState {
     freeTextNotes: [],
     annexDetail: 'durations',
     importReport: [],
+    storageWarning: null,
     calibration: null,
     audit: [],
     busy: false,
