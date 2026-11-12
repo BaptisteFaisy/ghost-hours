@@ -50,15 +50,15 @@ export async function createWorkspace(): Promise<Workspace> {
   };
 }
 
-export function runGit(
-  args: readonly string[],
+function execTool(
+  command: readonly string[],
   cwd: string,
   env: Readonly<Record<string, string>> = {},
 ): Promise<string> {
   return new Promise((resolvePromise, rejectPromise) => {
     execFile(
-      'git',
-      [...args],
+      command[0] ?? '',
+      [...command.slice(1)],
       {
         cwd,
         encoding: 'utf8',
@@ -67,7 +67,7 @@ export function runGit(
       },
       (error, stdout, stderr) => {
         if (error !== null) {
-          rejectPromise(new Error(`git ${args.join(' ')} failed in ${cwd}: ${stderr || error.message}`));
+          rejectPromise(new Error(`${command.join(' ')} failed in ${cwd}: ${stderr || error.message}`));
           return;
         }
         resolvePromise(stdout);
@@ -76,17 +76,36 @@ export function runGit(
   });
 }
 
-function baseEnv(workspace: Workspace): Record<string, string> {
+export function runGit(
+  args: readonly string[],
+  cwd: string,
+  env: Readonly<Record<string, string>> = {},
+): Promise<string> {
+  return execTool(['git', ...args], cwd, env);
+}
+
+/** Runs any binary without a shell; used by the fixtures that need `ssh-keygen`. */
+export function runTool(
+  command: readonly string[],
+  cwd: string,
+  env: Readonly<Record<string, string>> = {},
+): Promise<string> {
+  return execTool(command, cwd, env);
+}
+
+/** The environment that keeps a developer's own Git settings out of a test. */
+export function gitEnv(workspace: Workspace, extra: Readonly<Record<string, string>> = {}): Record<string, string> {
   return {
     HOME: workspace.root,
     XDG_CONFIG_HOME: join(workspace.root, '.config'),
     GIT_CONFIG_NOSYSTEM: '1',
     GIT_TERMINAL_PROMPT: '0',
+    ...extra,
   };
 }
 
 async function applyCommit(workspace: Workspace, repoPath: string, commit: CommitSpec): Promise<void> {
-  const env = { ...baseEnv(workspace), GIT_AUTHOR_DATE: commit.at, GIT_COMMITTER_DATE: commit.at };
+  const env = { ...gitEnv(workspace), GIT_AUTHOR_DATE: commit.at, GIT_COMMITTER_DATE: commit.at };
   if (commit.createBranch !== undefined) {
     await runGit(['checkout', '--quiet', '-b', commit.createBranch], repoPath, env);
   }
@@ -110,7 +129,7 @@ async function applyCommit(workspace: Workspace, repoPath: string, commit: Commi
 export async function createRepo(workspace: Workspace, spec: RepoSpec): Promise<string> {
   const repoPath = join(workspace.root, spec.name);
   await mkdir(repoPath, { recursive: true });
-  const env = baseEnv(workspace);
+  const env = gitEnv(workspace);
   await runGit(['-c', 'init.defaultBranch=main', 'init', '--quiet'], repoPath, env);
   await runGit(['config', 'user.name', SOFIA.name], repoPath, env);
   await runGit(['config', 'user.email', SOFIA.email], repoPath, env);
