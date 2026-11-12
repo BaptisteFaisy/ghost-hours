@@ -52,19 +52,19 @@
     min-height: 44px;
   }
 
-<<<<<<< HEAD
   /* WebKit sizes a `<select>` by its content and ignores `min-height`: the client
      filter measured 23 px tall on Safari where Chromium gave it 44. An explicit
      height is honoured by both engines. */
   .app-main select {
     height: 44px;
-=======
+  }
+
   /* A button is as narrow as its label: the rule removers of the Clients screen
      measured 37 px on Safari (40 px on Chromium), which is under the threshold
      a thumb can hit. Both dimensions, then: a target is a square, not a line. */
   .app-main button {
     min-width: 44px;
->>>>>>> 023bc67 (téléphone : un bouton a la largeur de son étiquette, 44 px sur téléphone)
+  }
   }
 
   /* The gestures of a block: a glyph is not a target, and 0.62 rem is not a
