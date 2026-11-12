@@ -157,6 +157,10 @@ export const fr: Dictionary = {
   'invoice.exportCsv': 'Exporter la feuille de temps (CSV)',
   'invoice.exportJson': 'Exporter les données (JSON)',
   'invoice.print': 'Imprimer le brouillon',
+  'invoice.printSaved':
+    'Le navigateur a bloqué la fenêtre d’impression : le brouillon a été enregistré en fichier HTML.',
+  'invoice.printBlocked':
+    'Ce navigateur n’autorise ni fenêtre d’impression ni téléchargement. Recopiez le brouillon depuis l’écran.',
   'invoice.noLines': 'Aucun travail confirmé sur cette période.',
 
   'settings.title': 'Réglages',
