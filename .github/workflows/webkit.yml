@@ -1,0 +1,64 @@
+name: WebKit (real Safari engine)
+
+# Le seul moteur qu'on ne peut pas faire tourner sur le runner Linux : WebKit.
+# Plutôt que d'attendre un Mac ou un iPhone sous la main, on prend un runner
+# macOS hébergé par GitHub — gratuit sur un dépôt public — et on y lance la
+# vraie suite sur le vrai moteur, iPhone 13 compris (l'émulation `isMobile` de
+# Playwright n'existe que sur WebKit/macOS).
+#
+# Aucun build ici : on teste l'URL publique, celle des juges. Si le déploiement
+# a menti, ce workflow le dit.
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy (GitHub Pages)"]
+    types: [completed]
+
+concurrency:
+  group: webkit-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  webkit:
+    name: webkit
+    runs-on: macos-latest
+    timeout-minutes: 5
+    env:
+      GHOST_HOURS_URL: https://baptistefaisy.github.io/ghost-hours/
+      GHOST_HOURS_BROWSERS: webkit,mobile-safari
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Le dépôt entier, depuis le lockfile : la suite e2e importe les chiffres
+      # attendus des deux fixtures, donc les paquets workspace doivent exister.
+      - name: Install
+        run: pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
+
+      - name: WebKit
+        run: pnpm exec playwright install webkit
+
+      - name: Suite on WebKit
+        run: pnpm e2e
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: webkit-artifacts
+          path: e2e/artifacts
+          retention-days: 7
+          if-no-files-found: ignore
