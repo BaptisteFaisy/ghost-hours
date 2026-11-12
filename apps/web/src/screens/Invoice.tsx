@@ -113,8 +113,14 @@ function PeriodNav(): JSX.Element {
 function DraftLines(props: { draft: InvoiceDraft }): JSX.Element {
   const { t, formatMoney, formatDuration } = useI18n();
   const { draft } = props;
+  // Only confirmed and locked blocks are billable: with none of them in the
+  // period there is no table to show, and the draft says so plainly.
+  if (draft.lines.length === 0) {
+    return <p className="invoice-no-lines">{t('invoice.noLines')}</p>;
+  }
   return (
     <table>
+      <caption className="visually-hidden">{t('invoice.lines')}</caption>
       <thead>
         <tr>
           <th scope="col">{t('invoice.line')}</th>
@@ -234,6 +240,7 @@ function ExportButtons(props: { draft: InvoiceDraft; annex: readonly AnnexDay[] 
       </button>{' '}
       <button
         type="button"
+        aria-describedby="print-hint"
         onClick={() => setPrintNote(noteFor(printOrSave(`draft-${draft.clientName}.html`, printable)))}
       >
         {t('invoice.print')}
@@ -241,6 +248,9 @@ function ExportButtons(props: { draft: InvoiceDraft; annex: readonly AnnexDay[] 
       <button type="button" onClick={() => downloadText(`annex-${draft.clientName}.csv`, annexCsv, 'text/csv;charset=utf-8')}>
         {t('invoice.annex')}
       </button>
+      <p id="print-hint" className="form-hint">
+        {t('invoice.printHint')}
+      </p>
       {printNote !== null && (
         <p role="status">{t(printNote === 'saved' ? 'invoice.printSaved' : 'invoice.printBlocked')}</p>
       )}
