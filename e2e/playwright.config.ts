@@ -58,7 +58,7 @@ const asked =
 const selected = new Set<string>(asked);
 
 /** The desktop suites: the fictitious month and the real one, 1440×900. */
-const DESKTOP = { testMatch: /(smoke|real-month)\.spec\.ts/ } as const;
+const DESKTOP = { testMatch: /(smoke|real-month|hostile)\.spec\.ts/ } as const;
 
 /** The phone suite: the link a judge opens — does it boot, is it readable. */
 const MOBILE = { testMatch: /mobile\.spec\.ts/ } as const;
