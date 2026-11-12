@@ -158,6 +158,10 @@ export const en = {
   'invoice.exportCsv': 'Export the timesheet (CSV)',
   'invoice.exportJson': 'Export the data (JSON)',
   'invoice.print': 'Print the draft',
+  'invoice.printSaved':
+    'The browser blocked the print window: the draft was saved as an HTML file instead.',
+  'invoice.printBlocked':
+    'This browser allows neither a print window nor a download. Copy the draft from the screen.',
   'invoice.noLines': 'No confirmed work in this period.',
 
   'settings.title': 'Settings',

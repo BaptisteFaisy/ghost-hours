@@ -33,3 +33,18 @@ export function openPrintWindow(html: string): boolean {
   if (typeof tab.print === 'function') tab.print();
   return true;
 }
+
+/** What a print attempt ended up doing. */
+export type PrintOutcome = 'printed' | 'saved' | 'unavailable';
+
+/**
+ * Print the document, or save it as a file when the browser refuses the new
+ * tab. Safari on iOS and the in-app browsers (LinkedIn, Teams, Instagram) block
+ * `window.open` even from a real click, and a button that silently does nothing
+ * is worse than a file in the downloads folder: the caller says which of the
+ * two happened.
+ */
+export function printOrSave(filename: string, html: string): PrintOutcome {
+  if (openPrintWindow(html)) return 'printed';
+  return downloadText(filename, html, 'text/html;charset=utf-8') ? 'saved' : 'unavailable';
+}

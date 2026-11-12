@@ -26,6 +26,29 @@ The browser is the system one: `GHOST_HOURS_BROWSER` if set, otherwise the
 first of `/usr/bin/google-chrome`, `/usr/bin/google-chrome-stable`,
 `/usr/bin/chromium`, `/usr/bin/chromium-browser`. Nothing is downloaded.
 
+## Two suites, five projects
+
+`smoke.spec.ts` is the desktop suite; `mobile.spec.ts` is the phone suite — the
+link a judge opens on an iPhone. Which projects run is decided by
+`GHOST_HOURS_BROWSERS` (default `chromium`, `all` for everything):
+
+```bash
+GHOST_HOURS_BROWSERS=all pnpm e2e                          # the whole matrix
+GHOST_HOURS_BROWSERS=firefox,mobile-chromium pnpm e2e     # a part of it
+```
+
+| Project | Engine | Viewport | Suite | Needs a download |
+|---|---|---|---|---|
+| `chromium` | system Chromium | 1440×900 | desktop | no |
+| `firefox` | Playwright Firefox | 1280×720 | desktop | yes |
+| `webkit` | Playwright WebKit | 1280×720 | desktop | yes |
+| `mobile-chromium` | system Chromium | iPhone 13, 390×664, touch | phone | no |
+| `mobile-safari` | Playwright WebKit | iPhone 13, 390×664, touch | phone | yes |
+
+Shared gestures live in `e2e/helpers.ts` so the two suites drive the app the
+same way. What each browser covers, and the WebKit gap on this Linux host, is
+written down in [`docs/BROWSERS.md`](../docs/BROWSERS.md).
+
 ## What each test proves
 
 | Test | Requirement | Proves |
@@ -34,6 +57,10 @@ first of `/usr/bin/google-chrome`, `/usr/bin/google-chrome-stable`,
 | requirement 2 | HEU-N-01 | Across all six screens, **no request to a foreign origin** and no console error |
 | requirement 3 | D.7 P4→P7 | The week grid renders, confirming a day raises the confirmed hours, the invoice says **Draft** with no number pattern, and the CSV export produces a real download |
 | requirement 3b | HEU-F-14 | The contradiction of 16 November is on the Conflicts screen with both *Keep* gestures and *Share the minutes* |
+| phone 1 | R-09 | The page boots at 390 px with real text on it — not a blank screen — and talks to nobody |
+| phone 2 | R-09 | The sample month loads on a phone and its counter fits inside the viewport |
+| phone 3 | R-09 | No view is wider than the screen: nothing forces a sideways scroll |
+| phone 4 | R-09 | A thumb reaches all five destinations and each of them renders |
 
 The expected figures are read from the fixture, never copied into the test: if
 the product changes, one file changes.

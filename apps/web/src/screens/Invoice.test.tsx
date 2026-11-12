@@ -17,7 +17,7 @@ import * as download from '../lib/download.ts';
  */
 vi.mock('../lib/download.ts', () => ({
   downloadText: vi.fn(() => true),
-  openPrintWindow: vi.fn(() => true),
+  printOrSave: vi.fn(() => 'printed'),
 }));
 
 const CURRENCY = /€\s?[\d\s.,]+/;
@@ -65,7 +65,7 @@ describe('Invoice', () => {
     stubBrowserStorage();
     clearBrowserStorage();
     vi.mocked(download.downloadText).mockClear();
-    vi.mocked(download.openPrintWindow).mockClear();
+    vi.mocked(download.printOrSave).mockClear();
   });
 
   it('says Draft and carries no invoice number', async () => {
@@ -106,8 +106,12 @@ describe('Invoice', () => {
     expect((csv?.[1] ?? '').length).toBeGreaterThan(0);
     expect(json?.[0]).toMatch(/\.json$/);
     expect(JSON.parse(json?.[1] ?? '{}').draftLabel).toBe('Draft');
-    expect(vi.mocked(download.openPrintWindow)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(download.openPrintWindow).mock.calls[0]?.[0] ?? '').toContain('Draft');
+    const printed = vi.mocked(download.printOrSave).mock.calls[0] ?? ['', ''];
+    expect(vi.mocked(download.printOrSave)).toHaveBeenCalledTimes(1);
+    expect(printed[0]).toMatch(/\.html$/);
+    expect(printed[1]).toContain('Draft');
+    // The print dialog opened: no fallback message is owed to the reader.
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
 });
@@ -138,7 +142,7 @@ describe('Invoice — tax, annex and client', () => {
     stubBrowserStorage();
     clearBrowserStorage();
     vi.mocked(download.downloadText).mockClear();
-    vi.mocked(download.openPrintWindow).mockClear();
+    vi.mocked(download.printOrSave).mockClear();
   });
 
   it('changes the total when a tax rate is typed', async () => {
@@ -168,5 +172,34 @@ describe('Invoice — tax, annex and client', () => {
     await userEvent.selectOptions(select, select.options[1]?.value ?? '');
     expect(select.value).toBe(select.options[1]?.value);
     expect(screen.getAllByText(CURRENCY).length).toBeGreaterThan(0);
+  });
+});
+
+describe('Invoice — the print gesture on a browser that refuses it', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    stubBrowserStorage();
+    clearBrowserStorage();
+    vi.mocked(download.downloadText).mockClear();
+    vi.mocked(download.printOrSave).mockClear();
+  });
+
+  it('says the draft was saved as a file when the print window is blocked', async () => {
+    vi.mocked(download.printOrSave).mockReturnValueOnce('saved');
+    renderInvoice();
+    await waitFor(() => expect(screen.getAllByRole('row').length).toBeGreaterThan(2));
+    await userEvent.click(screen.getByRole('button', { name: 'Print the draft' }));
+    const note = await screen.findByRole('status');
+    expect(note.textContent).toContain('saved as an HTML file');
+  });
+
+  it('says it plainly when neither the window nor a download is possible', async () => {
+    vi.mocked(download.printOrSave).mockReturnValueOnce('unavailable');
+    renderInvoice();
+    await waitFor(() => expect(screen.getAllByRole('row').length).toBeGreaterThan(2));
+    await userEvent.click(screen.getByRole('button', { name: 'Print the draft' }));
+    const note = await screen.findByRole('status');
+    expect(note.textContent).toContain('neither a print window nor a download');
   });
 });

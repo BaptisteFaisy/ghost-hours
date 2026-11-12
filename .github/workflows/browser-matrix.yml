@@ -1,0 +1,107 @@
+name: Browser matrix (Firefox, WebKit, phone)
+
+# La matrice complète de `docs/BROWSERS.md`. Le contrôle après déploiement
+# (`e2e.yml`) ne lance que Chromium — le navigateur système, sans rien
+# télécharger — parce qu'un verdict de CI tient dans cinq minutes. Ici on
+# assume le coût : Firefox et WebKit sont téléchargés une fois puis restent en
+# cache dans le home du runner.
+#
+# Jamais sur une pull request, jamais en schedule : un workflow rouge qui
+# n'annonce rien de nouveau est du bruit. On le lance à la main avant une
+# soumission, ou quand une dépendance de navigateur bouge.
+on:
+  workflow_dispatch:
+    inputs:
+      browsers:
+        description: "Projets : all, ou une liste (firefox,webkit,mobile-chromium,mobile-safari,chromium)"
+        default: "firefox,mobile-safari"
+        type: string
+      url:
+        description: "URL à tester (vide = aperçu local de la branche)"
+        default: "https://baptistefaisy.github.io/ghost-hours/"
+        type: string
+
+concurrency:
+  group: browser-matrix-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  matrix:
+    name: matrice
+    runs-on: [self-hosted, linux, x64, ghost-hours-worker]
+    timeout-minutes: 5
+    env:
+      GHOST_HOURS_BROWSERS: ${{ inputs.browsers }}
+      GHOST_HOURS_URL: ${{ inputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          clean: false
+
+      - name: Clean workspace
+        shell: bash
+        run: git clean -ffdx -e e2e/artifacts
+
+      - name: Toolchain
+        shell: bash
+        run: source .github/ci/toolchain.sh
+
+      - name: Install
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm install --frozen-lockfile --prefer-offline --store-dir "$HOME/tools/pnpm-store"
+
+      # Les navigateurs absents sont téléchargés ; ceux déjà présents dans
+      # ~/.cache/ms-playwright ne coûtent rien. WebKit a besoin de bibliothèques
+      # système que la distribution peut ne pas fournir : l'étape le dit au lieu
+      # de laisser un échec muet (voir docs/BROWSERS.md).
+      - name: Browsers
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          asked="$(echo "${GHOST_HOURS_BROWSERS/all/firefox,webkit}" | tr ',' '\n' | sed 's/^mobile-//' | sort -u)"
+          for browser in $asked; do
+            case "$browser" in
+              chromium) continue ;;
+              firefox|webkit)
+                pnpm exec playwright install "$browser" || {
+                  echo "::error::impossible d'installer $browser — voir docs/BROWSERS.md"
+                  exit 1
+                } ;;
+              *) echo "::error::navigateur inconnu : $browser" ; exit 1 ;;
+            esac
+          done
+
+      - name: Build and serve (when no URL is given)
+        if: inputs.url == ''
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm build
+          nohup pnpm --filter @ghost-hours/web preview --port 4173 > /tmp/gh-preview.log 2>&1 &
+          timeout 90 bash -c 'until curl -sf -o /dev/null http://localhost:4173/ghost-hours/; do sleep 2; done'
+
+      - name: Matrix
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm e2e
+
+      - name: Stop the preview
+        if: always() && inputs.url == ''
+        shell: bash
+        run: pkill -f "vite preview" || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-matrix-artifacts
+          path: e2e/artifacts
+          retention-days: 7
+          if-no-files-found: ignore
