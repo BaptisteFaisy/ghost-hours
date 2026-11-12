@@ -5,7 +5,8 @@ import { annexFor, draftFor } from '../state/selectors.ts';
 import { monthRangeInZone } from '@ghost-hours/core';
 import type { AnnexDay, InvoiceDraft } from '@ghost-hours/core';
 import { annexToCsv, billableBlocks, clipToPeriod, draftToJson, draftToPrintHtml, timesheetCsv } from '@ghost-hours/billing';
-import { downloadText, openPrintWindow } from '../lib/download.ts';
+import { downloadText, printOrSave } from '../lib/download.ts';
+import type { PrintOutcome } from '../lib/download.ts';
 import { Objections } from '../components/Objections.tsx';
 
 /**
@@ -206,10 +207,16 @@ function ExportBar(props: { draft: InvoiceDraft; annex: readonly AnnexDay[] }): 
   );
 }
 
+/** Which note the print gesture deserves: nothing when the dialog opened. */
+function noteFor(outcome: PrintOutcome): 'saved' | 'unavailable' | null {
+  return outcome === 'printed' ? null : outcome;
+}
+
 function ExportButtons(props: { draft: InvoiceDraft; annex: readonly AnnexDay[] }): JSX.Element {
   const { t } = useI18n();
   const state = useApp();
   const { draft, annex } = props;
+  const [printNote, setPrintNote] = useState<'saved' | 'unavailable' | null>(null);
   const period = monthRangeInZone(state.activeMonth.year, state.activeMonth.month, state.settings.timeZone);
   const billable = clipToPeriod(billableBlocks(state.blocks), period).filter(
     (block) => block.clientId === draft.clientId,
@@ -225,12 +232,18 @@ function ExportButtons(props: { draft: InvoiceDraft; annex: readonly AnnexDay[] 
       <button type="button" onClick={() => downloadText(`draft-${draft.clientName}.json`, draftToJson(draft), 'application/json')}>
         {t('invoice.exportJson')}
       </button>{' '}
-      <button type="button" onClick={() => openPrintWindow(printable)}>
+      <button
+        type="button"
+        onClick={() => setPrintNote(noteFor(printOrSave(`draft-${draft.clientName}.html`, printable)))}
+      >
         {t('invoice.print')}
       </button>{' '}
       <button type="button" onClick={() => downloadText(`annex-${draft.clientName}.csv`, annexCsv, 'text/csv;charset=utf-8')}>
         {t('invoice.annex')}
       </button>
+      {printNote !== null && (
+        <p role="status">{t(printNote === 'saved' ? 'invoice.printSaved' : 'invoice.printBlocked')}</p>
+      )}
     </>
   );
 }

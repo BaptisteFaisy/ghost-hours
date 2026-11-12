@@ -1,39 +1,12 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
-import { APP_URL, EXPECTED, GHOST_AMOUNT, HOURS, ORIGIN_UNDER_TEST } from './fixtures.ts';
+import { EXPECTED, GHOST_AMOUNT, HOURS } from './fixtures.ts';
+import { VIEWS, confirmedHours, expectCleanPage, gotoView, loadSampleMonth, watch } from './helpers.ts';
 
 /**
  * Requirement 1 (HEU-F-30), 2 (HEU-N-01), 3 (D.7 P4→P7) and 4 of the
- * `e2e-smoke` spec. One browser, the built app, the public URL by default.
+ * `e2e-smoke` spec. The desktop matrix: the built app, the public URL by
+ * default, on every browser the project selects (see `playwright.config.ts`).
  */
-
-interface Watch {
-  readonly foreign: string[];
-  readonly consoleErrors: string[];
-}
-
-function watch(page: Page): Watch {
-  const foreign: string[] = [];
-  const consoleErrors: string[] = [];
-  page.on('request', (request) => {
-    const url = new URL(request.url());
-    if (url.origin !== ORIGIN_UNDER_TEST && url.protocol !== 'data:' && url.protocol !== 'blob:') {
-      foreign.push(request.url());
-    }
-  });
-  page.on('console', (message) => {
-    if (message.type() === 'error') consoleErrors.push(message.text());
-  });
-  page.on('pageerror', (error) => consoleErrors.push(error.message));
-  return { foreign, consoleErrors };
-}
-
-async function loadSampleMonth(page: Page): Promise<void> {
-  await page.goto(APP_URL, { waitUntil: 'networkidle' });
-  await expect(page.getByRole('button', { name: /Load the sample month/i })).toBeVisible();
-  await page.getByRole('button', { name: /Load the sample month/i }).click();
-  await expect(page.getByText(HOURS.found).first()).toBeVisible({ timeout: 15_000 });
-}
 
 test('requirement 1 — the sample month loads in one click and shows the announced figures', async ({ page }) => {
   await loadSampleMonth(page);
@@ -48,18 +21,17 @@ test('requirement 1 — the sample month loads in one click and shows the announ
 test('requirement 2 — nothing leaves the browser and the console stays clean', async ({ page }) => {
   const seen = watch(page);
   await loadSampleMonth(page);
-  for (const view of ['Week', 'Evidence', 'Invoice', 'Clients', 'Settings']) {
-    await page.getByRole('button', { name: new RegExp(`^${view}$`, 'i') }).first().click();
+  for (const view of VIEWS) {
+    await gotoView(page, view);
     await page.waitForTimeout(400);
   }
-  expect(seen.foreign, `requests to a foreign origin: ${seen.foreign.join(', ')}`).toEqual([]);
-  expect(seen.consoleErrors, `console errors: ${seen.consoleErrors.join(' | ')}`).toEqual([]);
+  expectCleanPage(seen);
 });
 
 test('requirement 3 — the reviewer path: week, confirmation, draft, export', async ({ page }) => {
   await loadSampleMonth(page);
 
-  await page.getByRole('button', { name: /^Week$/i }).first().click();
+  await gotoView(page, 'Week');
   await expect(page.getByRole('grid', { name: /Week grid/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /Confirm the day/i }).first()).toBeVisible();
 
@@ -69,7 +41,7 @@ test('requirement 3 — the reviewer path: week, confirmation, draft, export', a
     .poll(async () => confirmedHours(page), { timeout: 15_000, message: 'confirmed hours did not move' })
     .toBeGreaterThan(confirmedBefore);
 
-  await page.getByRole('button', { name: /^Invoice$/i }).first().click();
+  await gotoView(page, 'Invoice');
   const invoice = page.getByRole('region', { name: /Invoice draft/i });
   await expect(invoice).toContainText('Draft');
   const text = (await invoice.textContent()) ?? '';
@@ -84,7 +56,7 @@ test('requirement 3 — the reviewer path: week, confirmation, draft, export', a
 
 test('requirement 3b — the contradiction of the month is on screen', async ({ page }) => {
   await loadSampleMonth(page);
-  await page.getByRole('button', { name: /^Conflicts/i }).first().click();
+  await gotoView(page, 'Conflicts');
   // The screen is a region, and so is each contradiction inside it: take the
   // outer one by its class rather than by role, which would be ambiguous.
   const screen = page.locator('section.conflicts-screen');
@@ -93,15 +65,3 @@ test('requirement 3b — the contradiction of the month is on screen', async ({ 
   await expect(screen.getByRole('button', { name: /Keep /i }).first()).toBeVisible();
   await expect(screen.getByRole('button', { name: /Share the minutes/i }).first()).toBeVisible();
 });
-
-/** Hours shown by the "Confirmed hours" counter of the month screen. */
-async function confirmedHours(page: Page): Promise<number> {
-  await page.getByRole('button', { name: /^Month$/i }).first().click();
-  await page.waitForTimeout(300);
-  const counter = page.getByLabel(/Ghost hours counter/i);
-  const text = (await counter.textContent()) ?? '';
-  const match = /Confirmed hours\s*([\d.,]+)\s*h/.exec(text.replace(/\s+/g, ' '));
-  await page.getByRole('button', { name: /^Week$/i }).first().click();
-  const value = match?.[1] ?? '0';
-  return Number.parseFloat(value.replace(',', '.'));
-}
