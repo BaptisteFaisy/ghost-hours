@@ -1,5 +1,6 @@
 import type { Block, Client, Minutes, ReconstructionSettings, RoundingRule } from '@ghost-hours/core';
 import { billableBlocks, blockMinutes, dayKeyOf, groupByDay, sumMinutes } from './blocks.ts';
+import { applyDailyCap } from './caps.ts';
 import { applyRoundingByScope } from './rounding.ts';
 
 /**
@@ -98,13 +99,21 @@ export function dailyProportional(
   });
 }
 
-/** Day quantities of a client, whichever daily mode it bills with. */
+/**
+ * Day quantities of a client, whichever daily mode it bills with.
+ *
+ * The cap is applied here rather than left to each mode: it is a guard, not a
+ * billing mode, and a guard only one caller applies is a guard that will be
+ * forgotten. One calendar day is never billed more than one day (D.6).
+ */
 export function clientDayQuantities(
   blocks: readonly Block[],
   client: Client,
   settings: ReconstructionSettings,
 ): readonly DayQuantity[] {
-  return client.mode === 'daily-proportional'
-    ? dailyProportional(blocks.filter((block) => block.clientId === client.id), settings)
-    : dailyThresholds(blocks, client, settings);
+  const quantities =
+    client.mode === 'daily-proportional'
+      ? dailyProportional(blocks.filter((block) => block.clientId === client.id), settings)
+      : dailyThresholds(blocks, client, settings);
+  return applyDailyCap(quantities, settings);
 }

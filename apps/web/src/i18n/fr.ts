@@ -266,6 +266,12 @@ export const fr: Dictionary = {
   'conflicts.evidence': 'Preuves en contradiction',
   'conflicts.position': '{index} sur {total}',
   'conflicts.settled': 'Tranché',
+  // --- journées surchargées (D.6, le volet avertissement des plafonds) ---
+  'overload.title': 'Journées surchargées',
+  'overload.explain':
+    'Ces journées portent, tous clients confondus, plus de temps compté qu’une journée de travail ({threshold}). Le plafond empêche déjà de facturer plus d’un jour à un même client ; voici l’autre risque — les mêmes heures comptées deux fois, ou une machine qui n’a jamais tourné au ralenti. Regarde les preuves avant de facturer.',
+  'overload.none': 'Aucune journée ne dépasse une journée de travail.',
+  'overload.day': '{date} : {hours} comptées, pour une journée de {threshold}',
 
   // --- pourquoi le bloc a ces bornes (idée P-05) ---
   'block.reason': 'Pourquoi ces bornes',

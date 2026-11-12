@@ -2,7 +2,7 @@ import type { Block, Conflict, Evidence, Minutes } from '@ghost-hours/core';
 import { msToWholeMinutes } from '@ghost-hours/core';
 import { useApp, useDispatch } from '../state/store.tsx';
 import { BlockReason as BlockReasonLine } from '../components/ReasonLine.tsx';
-import { blockById, clientById } from '../state/selectors.ts';
+import { blockById, clientById, overloadedDays } from '../state/selectors.ts';
 import { useI18n } from '../i18n/index.ts';
 import type { AppState } from '../state/types.ts';
 
@@ -38,6 +38,41 @@ export function Conflicts(): JSX.Element {
           total={open.length}
         />
       ))}
+      <OverloadSection />
+    </section>
+  );
+}
+
+/**
+ * The second kind of contradiction, and the one a conflict block cannot show:
+ * a day that holds more counted time than one working day, across every client.
+ * The product does not settle it either — it names the days and the hours, and
+ * leaves the reviewer look at the evidence.
+ */
+function OverloadSection(): JSX.Element {
+  const { t, formatDay, formatDuration } = useI18n();
+  const state = useApp();
+  const days = overloadedDays(state);
+  const threshold = formatDuration(state.settings.dayLengthMinutes);
+  return (
+    <section className="overload-panel" aria-label={t('overload.title')}>
+      <h3>{t('overload.title')}</h3>
+      <p>{t('overload.explain', { threshold })}</p>
+      {days.length === 0 ? (
+        <p>{t('overload.none')}</p>
+      ) : (
+        <ul>
+          {days.map((day) => (
+            <li key={day.dayKey}>
+              {t('overload.day', {
+                date: formatDay(day.dayKey),
+                hours: formatDuration(day.totalMinutes),
+                threshold: formatDuration(day.thresholdMinutes),
+              })}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

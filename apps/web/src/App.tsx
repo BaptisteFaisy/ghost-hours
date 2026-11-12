@@ -48,6 +48,7 @@ function Shell(): JSX.Element {
           {t('app.busy')}
         </p>
       )}
+      <StorageWarning />
       <nav className="app-nav" aria-label={t('nav.label')}>
         <ul>
           {NAV_ITEMS.map((item) => (
@@ -73,6 +74,24 @@ function Shell(): JSX.Element {
         <p>{t('settings.privacy')}</p>
       </footer>
     </div>
+  );
+}
+
+/**
+ * The shell says out loud when the browser refuses to keep the data (private
+ * mode, storage full, IndexedDB blocked). A review that will not survive a
+ * reload announces itself where the reader is looking — the import report of
+ * the settings screen is a trace, not a warning.
+ */
+function StorageWarning(): JSX.Element | null {
+  const { t } = useI18n();
+  const { storageWarning } = useApp();
+  if (storageWarning == null) return null;
+  return (
+    <p className="storage-warning" role="alert">
+      <strong>{t('error.persistence')}</strong> {t('error.persistWrite')}{' '}
+      <span className="numeric">{storageWarning}</span>
+    </p>
   );
 }
 

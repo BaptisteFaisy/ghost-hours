@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { loadSampleMonth } from '@ghost-hours/fixture-sample-month';
-import { annexFor, draftFor, monthCounter } from './selectors.ts';
+import type { BlockStatus } from '@ghost-hours/core';
+import type { AppState } from './types.ts';
+import { annexFor, draftFor, monthCounter, overloadedDays } from './selectors.ts';
 import { loadSampleState, sampleStateAfter } from './sampleState.ts';
 
 /**
@@ -67,5 +69,48 @@ describe('annexFor', () => {
     expect(block).toBeDefined();
     const confirmed = await sampleStateAfter({ type: 'confirmBlock', blockId: block?.id ?? '' });
     expect(annexFor(confirmed, client?.id ?? '').length).toBeGreaterThan(0);
+  });
+});
+
+describe('overloadedDays (D.6, the warning side of the caps)', () => {
+  /** Two blocks of five hours on 10 November 2026, Paris time: 600 min > 420. */
+  function overloadedState(base: AppState, status: BlockStatus): AppState {
+    const template = base.blocks[0];
+    if (template === undefined) throw new Error('the sample month has no block');
+    const morning = Date.UTC(2026, 10, 10, 8, 0);
+    return {
+      ...base,
+      blocks: [
+        { ...template, id: 'ov-1', clientId: 'ov-a', start: morning, end: morning + 300 * 60_000, status },
+        {
+          ...template,
+          id: 'ov-2',
+          clientId: 'ov-b',
+          start: morning + 300 * 60_000,
+          end: morning + 600 * 60_000,
+          status,
+        },
+      ],
+    };
+  }
+
+  it('flags a day that carries more counted time than one working day', async () => {
+    const base = await loadSampleState();
+    const days = overloadedDays(overloadedState(base, 'confirmed'));
+    expect(days).toHaveLength(1);
+    expect(days[0]?.dayKey).toBe('2026-11-10');
+    expect(days[0]?.totalMinutes).toBe(600);
+    expect(days[0]?.thresholdMinutes).toBe(base.settings.dayLengthMinutes);
+  });
+
+  it('says nothing about a month that stays inside the days', async () => {
+    const loaded = await loadSampleState();
+    expect(overloadedDays(loaded)).toEqual([]);
+  });
+
+  it('counts neither a conflict nor a rejection', async () => {
+    const base = await loadSampleState();
+    expect(overloadedDays(overloadedState(base, 'rejected'))).toEqual([]);
+    expect(overloadedDays(overloadedState(base, 'conflict'))).toEqual([]);
   });
 });

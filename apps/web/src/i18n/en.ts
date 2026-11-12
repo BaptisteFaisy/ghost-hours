@@ -267,6 +267,12 @@ export const en = {
   'conflicts.evidence': 'Evidence in conflict',
   'conflicts.position': '{index} of {total}',
   'conflicts.settled': 'Settled',
+  // --- over-booked days (D.6, the warning side of the caps) ---
+  'overload.title': 'Over-booked days',
+  'overload.explain':
+    'These days carry more counted time than one working day ({threshold}), every client together. The cap already keeps one client from being billed more than a day; this is the other risk — the same hours claimed twice, or a machine that never stopped. Look at the evidence before invoicing.',
+  'overload.none': 'No day exceeds one working day.',
+  'overload.day': '{date}: {hours} counted, over a {threshold} day',
 
   // --- why a block has these bounds (idea P-05) ---
   'block.reason': 'Why these bounds',
