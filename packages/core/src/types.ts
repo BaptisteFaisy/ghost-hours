@@ -160,7 +160,7 @@ export type BlockOrigin = 'git-session' | 'meeting' | 'merged' | 'manual';
 export type BlockReason =
   | { readonly kind: 'checkout'; readonly repo: string; readonly minutes: number }
   | { readonly kind: 'assumed'; readonly minutes: number;
-      readonly boundedBy: 'previous-proof' | 'workday-start' | 'none' }
+      readonly boundedBy: 'previous-proof' | 'workday-start' | 'none' | 'day-cap' }
   | { readonly kind: 'resume'; readonly pauseMinutes: number }
   | { readonly kind: 'meeting' }
   | { readonly kind: 'manual' }

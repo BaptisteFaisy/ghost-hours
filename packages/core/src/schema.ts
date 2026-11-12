@@ -42,7 +42,7 @@ export const blockReasonSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('assumed'),
     minutes: z.number(),
-    boundedBy: z.enum(['previous-proof', 'workday-start', 'none']),
+    boundedBy: z.enum(['previous-proof', 'workday-start', 'none', 'day-cap']),
   }),
   z.object({ kind: z.literal('resume'), pauseMinutes: z.number() }),
   z.object({ kind: z.literal('meeting') }),
