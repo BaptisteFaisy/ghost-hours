@@ -76,12 +76,30 @@ once, one rule.
 This is the whole argument for running the real engine: the emulation proves the layout of the app
 *as Chromium lays it out*.
 
+## The phone rules, enforced by CI
+
+The rules a phone has and a desktop does not are now **assertions**, not advice. They run after every
+deployment, on the 390 px viewport and on the 320 px one, on Chromium and on the real WebKit:
+
+| Rule | Why it is a rule | Where |
+|---|---|---|
+| no view is wider than the screen | a page that scrolls sideways is a page nobody reads | `mobile.spec.ts` — *phone 3* |
+| every gesture is at least 40×40 px | Apple asks 44×44; a thumb is not a cursor | `mobile.spec.ts` — *phone 5* |
+| no field is under 16 px | iOS Safari **zooms the whole page in** on focus and leaves it there | `mobile.spec.ts` — *phone 6* |
+| the page measures the visible area (`100dvh`) | `100vh` on iOS hides the bottom under the browser bars | `apps/web/src/mobile.css` |
+
+Two of those rules were broken when they were measured, and only a phone could have told: the client
+picker was set at 11.5 px (iOS would have zoomed in on it) and the block gestures were 24 px wide with
+a 0.62 rem label. The month navigation, the filters and the forms were 38 px tall. All fixed, and
+now watched by the CI.
+
 ## What is still not proven
 
-A **physical** iPhone: the in-app browsers of LinkedIn, Instagram or Teams, the ergonomics of a real
-thumb, the Safari settings a reader may have changed. The emulation covers the layout and the touch
-events; it does not cover the device. This file says so rather than implying a tick that was never
-observed — but the gap is now a device, not an engine.
+A **physical** iPhone: the in-app browsers of LinkedIn, Instagram or Teams (their `window.open`
+refusal *is* covered — the hostile suite blocks it — but their WebView is not Safari), the ergonomics
+of a real thumb, the Safari settings a reader may have changed. The emulation covers the layout, the
+touch events and the sizes; it does not cover the device. This file says so rather than implying a
+tick that was never observed — but the gap is now a device, not an engine.
 
 On a Linux host, WebKit still cannot start: Playwright's build links against `libjxl.so.0.8` and
 `libbacktrace.so.0`, absent from Ubuntu 24.04 (which ships `libjxl0.7`). That is why the Safari line

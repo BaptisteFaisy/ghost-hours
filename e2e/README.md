@@ -47,6 +47,7 @@ GHOST_HOURS_BROWSERS=firefox,mobile-chromium pnpm e2e     # a part of it
 | `firefox` | Playwright Firefox | 1280×720 | desktop | yes |
 | `webkit` | Playwright WebKit | 1280×720 | desktop | yes |
 | `mobile-chromium` | system Chromium | iPhone 13, 390×664, touch | phone | no |
+| `mobile-small` | system Chromium | iPhone SE, 320×568, touch | phone | no |
 | `mobile-safari` | Playwright WebKit | iPhone 13, 390×664, touch | phone | yes |
 
 The desktop projects run `smoke`, `real-month` and `hostile`; the phone
