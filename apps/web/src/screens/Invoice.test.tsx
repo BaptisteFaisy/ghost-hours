@@ -41,12 +41,12 @@ function ConfirmFirstClient(): null {
   return null;
 }
 
-function renderInvoice(): void {
+function renderInvoice(confirmWork: boolean = true): void {
   render(
     <AppProvider>
       <I18nProvider>
         <LoadSampleMonth />
-        <ConfirmFirstClient />
+        {confirmWork ? <ConfirmFirstClient /> : null}
         <Invoice />
       </I18nProvider>
     </AppProvider>,
@@ -201,5 +201,43 @@ describe('Invoice — the print gesture on a browser that refuses it', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Print the draft' }));
     const note = await screen.findByRole('status');
     expect(note.textContent).toContain('neither a print window nor a download');
+  });
+});
+
+describe('Invoice — naming, empty state and print hint', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    stubBrowserStorage();
+    clearBrowserStorage();
+    vi.mocked(download.downloadText).mockClear();
+    vi.mocked(download.printOrSave).mockClear();
+  });
+
+  it('names the lines table and ties the print hint to the print button', async () => {
+    renderInvoice();
+    await waitFor(() => expect(screen.getAllByRole('row').length).toBeGreaterThan(2));
+    // The lines table carries its name for screen readers.
+    const table = screen.getAllByRole('table')[0];
+    if (!table) throw new Error('no line table');
+    expect(within(table).getByText('Lines')).toBeDefined();
+    // The print hint sits next to the print button and is wired to it, and it
+    // is no live region: the fallback status keeps its exclusive role.
+    const hint = screen.getByText('The print dialog is the PDF: nothing is uploaded anywhere.');
+    expect(hint).toBeDefined();
+    const print = screen.getByRole('button', { name: 'Print the draft' });
+    expect(print.getAttribute('aria-describedby')).toBe(hint.id);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('says no confirmed work when nothing is billable in the period', async () => {
+    // The sample month is loaded but nothing is confirmed: every block stays
+    // proposed, so no line may reach the draft.
+    renderInvoice(false);
+    await waitFor(() =>
+      expect(screen.getByText('No confirmed work in this period.')).toBeDefined(),
+    );
+    // The lines table is not rendered at all in the empty state.
+    expect(screen.queryByText('Lines')).toBeNull();
   });
 });
