@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AppProvider } from '../state/store.tsx';
 import { I18nProvider } from '../i18n/index.ts';
@@ -111,5 +111,51 @@ describe('Month — ghost explainer and solid confirmation', () => {
     await waitFor(() => {
       expect(within(region).queryByText('0 h')).toBeNull();
     });
+  });
+});
+
+describe('Month — which month is under review, and for whom', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    stubBrowserStorage();
+    clearBrowserStorage();
+  });
+
+  /** The month picker, as an input so its value can be read and changed. */
+  function picker(): HTMLInputElement {
+    // The navigation and the input carry the same label: ask for the input.
+    return screen.getByLabelText('Month to review', { selector: 'input' }) as HTMLInputElement;
+  }
+
+  it('steps one month with the previous and next gestures', async () => {
+    renderMonth();
+    await counter();
+    expect(picker().value).toBe('2026-11');
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(picker().value).toBe('2026-12');
+    await userEvent.click(screen.getByRole('button', { name: 'Previous' }));
+    expect(picker().value).toBe('2026-11');
+  });
+
+  it('says so when the chosen month holds no block', async () => {
+    renderMonth();
+    await counter();
+    fireEvent.change(picker(), { target: { value: '2026-12' } });
+    await waitFor(() => expect(screen.getByText('No block on this day.')).toBeDefined());
+  });
+
+  it('narrows the breakdowns to one client and leaves the counter global', async () => {
+    renderMonth();
+    const region = await counter();
+    expect(screen.getByRole('rowheader', { name: 'Globex' })).toBeDefined();
+
+    await userEvent.selectOptions(screen.getByLabelText('Client'), 'Acme');
+
+    await waitFor(() => expect(screen.queryByRole('rowheader', { name: 'Globex' })).toBeNull());
+    expect(screen.getByRole('rowheader', { name: 'Acme' })).toBeDefined();
+    expect(screen.queryByLabelText('Declared hours — Globex')).toBeNull();
+    // The headline never narrows: 104 h found is the month, not the filter.
+    expect(within(region).getByText('104 h')).toBeDefined();
   });
 });
