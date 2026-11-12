@@ -33,13 +33,18 @@ fallback has a test.
 
 ## What is actually run, and where
 
-| Engine | Suite | Where |
-|---|---|---|
-| Chromium (system Chrome) | `e2e/smoke.spec.ts` — 4 tests | every deploy (`.github/workflows/e2e.yml`) — observed green against the public URL |
-| Chromium, iPhone 13 emulation (390×664, touch) | `e2e/mobile.spec.ts` — 4 tests | same workflow, same run: 8 tests green after the deploy of `4b49438`. The phone layout is engine-independent, and mobile emulation needs no download |
-| Firefox | `e2e/smoke.spec.ts` — 4 tests | `.github/workflows/browser-matrix.yml`, on demand — observed green **on the CI runner** (4/4 against the public URL): the browser installs there and stays cached |
-| WebKit (Safari engine), desktop | `e2e/smoke.spec.ts` | same, on a host that can run WebKit |
-| WebKit, iPhone 13 emulation | `e2e/mobile.spec.ts` | same |
+| Engine | Suite | Where | Observed |
+|---|---|---|---|
+| Chromium (system Chrome) | `e2e/smoke.spec.ts` + `e2e/real-month.spec.ts` — 8 tests | every deploy (`.github/workflows/e2e.yml`) | green against the public URL |
+| Chromium, iPhone 13 emulation (390×664, touch) | `e2e/mobile.spec.ts` — 4 tests | same workflow, same run | green — the phone layout, engine-independent, and no download |
+| Firefox | the same desktop suites | `.github/workflows/browser-matrix.yml`, on demand | green **on the CI runner**: the browser installs there and stays cached |
+| **WebKit — the real Safari engine** | the same desktop suites | **`.github/workflows/webkit.yml`, on a macOS runner, after every deploy** | **green — 12/12** |
+| **WebKit, iPhone 13 emulation** | `e2e/mobile.spec.ts` — 4 tests | same run | green |
+
+The repository is public, so GitHub-hosted runners are free — macOS included, the only platform where
+Playwright runs the real WebKit and where the `isMobile` emulation of an iPhone exists. **No Mac and
+no iPhone are needed** to check the Safari line: it runs after every deployment, on the public URL,
+exactly like the other engines.
 
 Run the whole matrix locally:
 
@@ -53,24 +58,31 @@ GHOST_HOURS_URL=http://localhost:4173/ghost-hours/ GHOST_HOURS_BROWSERS=all pnpm
 `chromium,firefox,webkit,mobile-chromium,mobile-safari`. The default is
 `chromium`, which is what CI runs on a pull request's budget.
 
-## The honest gap: WebKit on this Linux host
+## What WebKit found that the other engines did not
 
-Firefox runs. WebKit does not, on Linux Mint 22 / Ubuntu 24.04: Playwright's
-WebKit build links against `libjxl.so.0.8` and `libbacktrace.so.0`, and the
-distribution ships `libjxl0.7` and no `libbacktrace0` at all. Extracting the
-`.deb` files by hand covers `libavif16`, `libgav1` and `libyuv` and still leaves
-those two missing, so WebKit refuses to launch.
+The first real WebKit run failed on its first try, on a bug no other engine had seen:
 
-The Safari line is therefore covered three ways instead of one:
+```
+[mobile-safari] › e2e/mobile.spec.ts › phone 3 — nothing sticks out of the screen on any view
+Error: view Month overflows by 274px (TABLE.month-clients right=664)
+```
 
-1. everything engine-independent (layout, touch, reachability, blank screen) is
-   run on Chromium with the iPhone 13 viewport, in CI;
-2. every API where Safari behaves differently has a fallback and a unit test
-   (table above);
-3. the `webkit` and `mobile-safari` projects stay in the configuration, so a
-   macOS machine — or a Linux host with those two libraries — runs the real
-   thing with `GHOST_HOURS_BROWSERS=all`, no code change.
+On a real iPhone 13 (390 px), the month's per-client table measured 664 px and pushed the **page**
+wider: the reader scrolls sideways. WebKit honours a table's min-content width; Chromium squeezes the
+cells, which is why the phone emulation passed. The fix (`apps/web/src/responsive.css`) makes a
+table wider than the screen scroll inside its own box, and lets long words break — seven tables at
+once, one rule.
 
-Before the submission the real Safari run should happen once on a Mac or an
-iPhone; until then this file says so rather than implying a green tick that was
-never observed.
+This is the whole argument for running the real engine: the emulation proves the layout of the app
+*as Chromium lays it out*.
+
+## What is still not proven
+
+A **physical** iPhone: the in-app browsers of LinkedIn, Instagram or Teams, the ergonomics of a real
+thumb, the Safari settings a reader may have changed. The emulation covers the layout and the touch
+events; it does not cover the device. This file says so rather than implying a tick that was never
+observed — but the gap is now a device, not an engine.
+
+On a Linux host, WebKit still cannot start: Playwright's build links against `libjxl.so.0.8` and
+`libbacktrace.so.0`, absent from Ubuntu 24.04 (which ships `libjxl0.7`). That is why the Safari line
+runs on macOS rather than here — and it no longer costs a human being.
