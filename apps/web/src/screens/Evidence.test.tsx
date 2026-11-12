@@ -59,6 +59,40 @@ const COMMIT: Proof = {
   added: 42,
   deleted: 7,
   authorEmail: 'sofia@example.com',
+  signature: 'G',
+  signer: 'Sofia <sofia@example.com>',
+  committerEmail: 'sofia@example.com',
+  committedAt: at(3, 10, 25),
+};
+
+/** A commit nobody signed: the field is simply absent, as in the sample month. */
+const UNSIGNED_COMMIT: Proof = {
+  id: 'git:acme-api:def456',
+  source: 'git',
+  kind: 'commit',
+  clientId: 'cli-acme',
+  at: at(3, 10, 20),
+  repo: 'acme-api',
+  branch: 'feat/billing',
+  summary: 'Fix the rounding edge case',
+  authorEmail: 'sofia@example.com',
+};
+
+/** A commit somebody else committed, with a clock moved back before it. */
+const TAMPERED_COMMIT: Proof = {
+  id: 'git:acme-api:ghi789',
+  source: 'git',
+  kind: 'commit',
+  clientId: 'cli-acme',
+  at: at(3, 10, 20),
+  repo: 'acme-api',
+  branch: 'feat/billing',
+  summary: 'Backdated change',
+  authorEmail: 'sofia@example.com',
+  signature: 'G',
+  signer: 'Sofia <sofia@example.com>',
+  committerEmail: 'malik@example.org',
+  committedAt: at(3, 9, 0),
 };
 
 function Seed(props: { readonly proofs: readonly Proof[] }): null {
@@ -176,5 +210,67 @@ describe('Evidence — the block panel', () => {
     expect(within(list).getByText(/09:05/)).toBeDefined();
     expect(within(list).getByText('notes/2026-11-04.md')).toBeDefined();
     expect(within(list).getAllByText('Line').length).toBeGreaterThan(0);
+  });
+});
+
+describe('Evidence — the credibility of the proofs', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    stubBrowserStorage();
+    clearBrowserStorage();
+  });
+
+  it('tells the signature of a commit and who signed it', async () => {
+    renderEvidence([MEETING, COMMIT]);
+    await openTheBlock();
+
+    const list = await waitFor(() => screen.getByRole('list', { name: 'Evidence' }));
+    expect(within(list).getByText('Signature')).toBeDefined();
+    expect(within(list).getByText('Signed and trusted')).toBeDefined();
+    expect(within(list).getByText('Signed by Sofia <sofia@example.com>')).toBeDefined();
+  });
+
+  it('calls a commit without a signature unsigned, and says so', async () => {
+    // The field is simply absent, as in the sample month: no signature, no
+    // signature invented either.
+    renderEvidence([UNSIGNED_COMMIT]);
+    await openTheBlock();
+
+    const list = await waitFor(() => screen.getByRole('list', { name: 'Evidence' }));
+    expect(within(list).getByText('Not signed')).toBeDefined();
+    expect(
+      within(list).getByText('No cryptographic signature: anyone could have written this commit.'),
+    ).toBeDefined();
+  });
+
+  it('names the signals of a commit whose history was touched', async () => {
+    renderEvidence([TAMPERED_COMMIT]);
+    await openTheBlock();
+
+    const list = await waitFor(() => screen.getByRole('list', { name: 'Evidence' }));
+    expect(
+      within(list).getByText('Someone else committed it: the author is not the committer.'),
+    ).toBeDefined();
+    expect(
+      within(list).getByText('Committed before it was written: a clock was moved.'),
+    ).toBeDefined();
+  });
+
+  it('summarizes the verifiability of the block', async () => {
+    renderEvidence([MEETING, COMMIT]);
+    await openTheBlock();
+
+    expect(await screen.findByText('Verifiability')).toBeDefined();
+    expect(screen.getByText('100% of the commits are signed, 0 proof(s) to check')).toBeDefined();
+  });
+
+  it('says nothing about signatures in a block without a commit', async () => {
+    renderEvidence([MEETING]);
+    await openTheBlock();
+
+    await waitFor(() => screen.getByRole('list', { name: 'Evidence' }));
+    expect(screen.queryByText('Verifiability')).toBeNull();
+    expect(screen.queryByText(/of the commits are signed/)).toBeNull();
   });
 });
