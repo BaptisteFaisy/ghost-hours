@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
-import type { Cents, Minutes } from '@ghost-hours/core';
+import type { Cents, Minutes, SupportedLocale } from '@ghost-hours/core';
 import { dayKeyInZone, monthRangeInZone } from '@ghost-hours/core';
 import { useApp, useDispatch } from '../state/store.tsx';
-import { clientById, monthCounter } from '../state/selectors.ts';
+import { clientById, declaredProgress, monthCounter } from '../state/selectors.ts';
+import type { DeclaredProgress } from '../state/selectors.ts';
+import type { I18nApi } from '../i18n/index.ts';
 import type { AppState } from '../state/types.ts';
 import { useI18n } from '../i18n/index.ts';
 import { formatHoursShort } from '../components/format.ts';
@@ -28,6 +30,7 @@ export function Month(): JSX.Element {
   // headline that quietly changes meaning when a filter moves is a trap.
   const [clientFilter, setClientFilter] = useState<string | null>(null);
 
+  const progress = declaredProgress(state);
   const rows = monthCounter(state);
   const perClient = rows.filter(
     (row) => row.clientId !== null && clientById(state, row.clientId) !== null,
@@ -54,6 +57,7 @@ export function Month(): JSX.Element {
         found={found}
         confirmed={confirmed}
         declared={declared}
+        progress={progress}
         ghost={ghost}
         amount={amount}
       />
@@ -227,8 +231,28 @@ interface CounterProps {
   readonly found: Minutes;
   readonly confirmed: Minutes;
   readonly declared: Minutes | null;
+  readonly progress: DeclaredProgress;
   readonly ghost: Minutes | null;
   readonly amount: Cents | null;
+}
+
+/**
+ * What the "Declared hours" cell says: the total when every client declared,
+ * how far the reader got when only some did, and the honest "nothing yet"
+ * before anybody typed a figure.
+ */
+function declaredLabel(
+  declared: Minutes | null,
+  progress: DeclaredProgress,
+  t: I18nApi['t'],
+  locale: SupportedLocale,
+): string {
+  if (declared !== null) return formatHoursShort(declared, locale);
+  if (progress.done === 0) return t('month.noDeclared');
+  return `${formatHoursShort(progress.minutes, locale)} — ${t('month.declaredPartial', {
+    done: progress.done,
+    total: progress.total,
+  })}`;
 }
 
 function Counter(props: CounterProps): JSX.Element {
@@ -246,9 +270,7 @@ function Counter(props: CounterProps): JSX.Element {
         </div>
         <div className="counter-item">
           <dt>{t('month.declaredHours')}</dt>
-          <dd>
-            {props.declared === null ? t('month.noDeclared') : formatHoursShort(props.declared, locale)}
-          </dd>
+          <dd>{declaredLabel(props.declared, props.progress, t, locale)}</dd>
         </div>
         <div className="counter-item" data-tone="ghost">
           <dt>{t('month.ghostHours')}</dt>

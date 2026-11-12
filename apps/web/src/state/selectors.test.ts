@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { loadSampleMonth } from '@ghost-hours/fixture-sample-month';
 import type { BlockStatus } from '@ghost-hours/core';
 import type { AppState } from './types.ts';
-import { annexFor, draftFor, monthCounter, overloadedDays } from './selectors.ts';
+import { annexFor, declaredProgress, draftFor, monthCounter, overloadedDays } from './selectors.ts';
 import { loadSampleState, sampleStateAfter } from './sampleState.ts';
 
 /**
@@ -112,5 +112,28 @@ describe('overloadedDays (D.6, the warning side of the caps)', () => {
     const base = await loadSampleState();
     expect(overloadedDays(overloadedState(base, 'rejected'))).toEqual([]);
     expect(overloadedDays(overloadedState(base, 'conflict'))).toEqual([]);
+  });
+});
+
+describe('declaredProgress', () => {
+  it('counts the sample month as fully declared', async () => {
+    const loaded = await loadSampleState();
+    const progress = declaredProgress(loaded);
+    expect(progress.total).toBe(3);
+    expect(progress.done).toBe(3);
+    expect(progress.minutes).toBe(5520);
+  });
+
+  it('reports a partial month without pretending it is complete', async () => {
+    const loaded = await loadSampleState();
+    const progress = declaredProgress({ ...loaded, declaredMinutes: { acme: 1200 } });
+    expect(progress.done).toBe(1);
+    expect(progress.total).toBe(3);
+    expect(progress.minutes).toBe(1200);
+  });
+
+  it('says nothing is declared when nothing is', async () => {
+    const loaded = await loadSampleState();
+    expect(declaredProgress({ ...loaded, declaredMinutes: {} }).done).toBe(0);
   });
 });

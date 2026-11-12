@@ -54,6 +54,7 @@ export const fr: Dictionary = {
   'month.perClient': 'Par client',
   'month.allClients': 'Tous les clients',
   'month.noDeclared': 'Aucune heure déclarée pour l’instant',
+  'month.declaredPartial': '{done} clients sur {total} déclarés',
   'month.declaredPlaceholder': 'Heures déclarées',
   'month.counterSummary':
     '{found} retrouvées, {confirmed} confirmées, {ghost} heures fantômes soit {amount}.',

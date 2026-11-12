@@ -123,6 +123,31 @@ export function monthCounter(state: AppState): readonly MonthCounter[] {
 }
 
 /** The blocks of a week, sorted by start time. */
+/** How far the reader got through declaring the month, client by client. */
+export interface DeclaredProgress {
+  /** Clients that carry a declared figure, zero included. */
+  readonly done: number;
+  readonly total: number;
+  /** What is declared so far: a partial sum, never a promise. */
+  readonly minutes: Minutes;
+}
+
+/**
+ * The headline total stays empty until every client is declared, because a
+ * partial total would inflate the ghost hours. But answering "no declared hours
+ * yet" while one client out of three is filled in contradicts what is on
+ * screen — found on real data, where a month holds three projects and the
+ * reader remembers only one. So the counter says how far the declaration got.
+ */
+export function declaredProgress(state: AppState): DeclaredProgress {
+  const values = state.clients.map((client) => declaredOf(state, client.id));
+  return {
+    done: values.filter((value) => value !== null).length,
+    total: state.clients.length,
+    minutes: values.reduce<Minutes>((sum, value) => sum + (value ?? 0), 0),
+  };
+}
+
 export function weekBlocks(state: AppState, weekStart: Instant): readonly Block[] {
   const period = weekPeriod(state, weekStart);
   return state.blocks

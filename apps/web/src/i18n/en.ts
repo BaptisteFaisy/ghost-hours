@@ -55,6 +55,7 @@ export const en = {
   'month.perClient': 'Per client',
   'month.allClients': 'All clients',
   'month.noDeclared': 'No declared hours yet',
+  'month.declaredPartial': '{done} of {total} clients declared',
   'month.declaredPlaceholder': 'Declared hours',
   'month.counterSummary':
     '{found} found, {confirmed} confirmed, {ghost} ghost hours worth {amount}.',
