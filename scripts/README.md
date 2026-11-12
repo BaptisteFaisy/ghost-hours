@@ -101,7 +101,23 @@ node scripts/journal-hint.mjs
 node scripts/journal-hint.mjs --strict
 ```
 
-## One tool, not a guard
+## Two tools, not guards
+
+`anonymize-evidence.mjs` and `anchor-evidence.mjs` protect no promise by themselves: they make one
+possible.
+
+`anchor-evidence.mjs` is the ledger that catches **backdating**. A commit's date is self-attested, so
+on the 30th you can always invent the 3rd — unless the proofs of the 3rd were hashed and published
+while the 3rd was still today. The script hashes each day's proofs canonically, chains the days
+(`sha256(previous || day)`) and appends one line per day to `anchors.jsonl`; `verify` recomputes and
+tells you where the ledger and the evidence disagree. Publishing that file is what puts the witness
+outside the machine. It is stdlib-only and opens no socket, like every other script here.
+
+```
+node scripts/anchor-evidence.mjs add   evidence.json anchors.jsonl
+node scripts/anchor-evidence.mjs verify evidence.json anchors.jsonl
+node scripts/anchor-evidence.mjs tip    anchors.jsonl
+```
 
 `anonymize-evidence.mjs` protects no promise by itself: it makes one possible. The repository is
 public, and the most convincing month anybody can show is a real one — so this script takes a real
@@ -112,7 +128,8 @@ refuses a file that still carries a commit message. It produced
 with `--print-map` is the only link back to the real projects and never enters the repository.
 
 Exit 0 written, 1 refused, 2 usage error. Same discipline as the guards: standard library only, no
-network, `--help`, every message in English.
+network, `--help`, every message in English. The anchor exits 0 clean, 1 on a mismatch, 2 on a usage
+error — and `scripts/anchor-evidence.test.mjs` runs it for real, including a falsification.
 
 ## Shared code
 
