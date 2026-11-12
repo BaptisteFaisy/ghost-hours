@@ -3,6 +3,7 @@ import { useApp, useDispatch } from '../state/store.tsx';
 import { clientById } from '../state/selectors.ts';
 import { useI18n } from '../i18n/index.ts';
 import { Stitch } from './Stitch.tsx';
+import { CONFIDENCE_KEYS } from './statusLabels.ts';
 
 /**
  * One reconstructed block (D.11).
@@ -63,13 +64,7 @@ export function BlockCard(props: BlockCardProps): JSX.Element {
         status: t(`status.${block.status}`),
       })}
     >
-      <div className="block-heading">
-        <span className="block-client">{clientName}</span>
-        <span className="block-status">{t(`status.${block.status}`)}</span>
-        <span className="block-times">
-          {formatTime(block.start)}–{formatTime(block.end)}
-        </span>
-      </div>
+      <BlockHeading block={block} clientName={clientName} />
 
       <div className="block-parts">
         <div className="block-assumed" aria-label={t('week.assumed')}>
@@ -91,6 +86,30 @@ export function BlockCard(props: BlockCardProps): JSX.Element {
 
       <BlockActions block={block} clientName={clientName} onOpen={onOpen} />
       <ClientPicker block={block} />
+    </div>
+  );
+}
+
+/**
+ * The four words that identify a block: whose it is, what state it is in, how
+ * solid its proof is, and when it happened. The confidence grade is named for
+ * assistive technology and written on screen: a grade only one kind of reader
+ * can perceive is a grade the reviewer never checks.
+ */
+function BlockHeading(props: { block: Block; clientName: string }): JSX.Element {
+  const { t, formatTime } = useI18n();
+  const { block } = props;
+  const confidence = t(CONFIDENCE_KEYS[block.confidence]);
+  return (
+    <div className="block-heading">
+      <span className="block-client">{props.clientName}</span>
+      <span className="block-status">{t(`status.${block.status}`)}</span>
+      <span className="block-confidence" aria-label={t('a11y.confidence', { confidence })}>
+        {confidence}
+      </span>
+      <span className="block-times">
+        {formatTime(block.start)}–{formatTime(block.end)}
+      </span>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useApp, useDispatch } from '../state/store.tsx';
 import { blockById, clientById, evidenceOfBlock } from '../state/selectors.ts';
 import { useI18n } from '../i18n/index.ts';
 import { BlockReason } from '../components/ReasonLine.tsx';
+import { CONFIDENCE_KEYS, STATUS_KEYS } from '../components/statusLabels.ts';
 import type { MessageKey } from '../i18n/index.ts';
 
 /**
@@ -23,20 +24,6 @@ const KIND_KEYS: Readonly<Record<EvidenceKind, MessageKey>> = {
   meeting: 'evidence.meeting',
   note: 'evidence.note',
   manual: 'evidence.manual',
-};
-
-const STATUS_KEYS: Readonly<Record<Block['status'], MessageKey>> = {
-  proposed: 'status.proposed',
-  confirmed: 'status.confirmed',
-  rejected: 'status.rejected',
-  conflict: 'status.conflict',
-  locked: 'status.locked',
-};
-
-const CONFIDENCE_KEYS: Readonly<Record<Block['confidence'], MessageKey>> = {
-  solid: 'status.solid',
-  likely: 'status.likely',
-  'to-confirm': 'status.toConfirm',
 };
 
 /** Keys the dictionaries do not carry yet — reported, never invented. */
@@ -157,7 +144,15 @@ function BlockPanel(props: BlockPanelProps): JSX.Element {
           {formatDate(block.start)} {formatTime(block.start)} — {formatTime(block.end)}
         </p>
         <p className="evidence-status">
-          {t(STATUS_KEYS[block.status])} · {t(CONFIDENCE_KEYS[block.confidence])}
+          {t(STATUS_KEYS[block.status])} ·{' '}
+          <span
+            className="evidence-confidence"
+            aria-label={t('a11y.confidence', {
+              confidence: t(CONFIDENCE_KEYS[block.confidence]),
+            })}
+          >
+            {t(CONFIDENCE_KEYS[block.confidence])}
+          </span>
         </p>
       </header>
 
@@ -176,7 +171,7 @@ function BlockPanel(props: BlockPanelProps): JSX.Element {
       <Stitch proofs={proofs} />
       <ProofList proofs={proofs} />
 
-      <button type="button" onClick={props.onBack}>
+      <button type="button" aria-label={t('a11y.closePanel')} onClick={props.onBack}>
         {t('common.back')}
       </button>
     </div>
