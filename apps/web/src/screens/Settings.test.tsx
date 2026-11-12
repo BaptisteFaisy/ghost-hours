@@ -206,3 +206,49 @@ describe('Settings — decision log and pause threshold', () => {
     });
   });
 });
+
+describe('Settings — what was written but not reachable', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    stubBrowserStorage();
+    clearBrowserStorage();
+  });
+
+  function renderSettings(): void {
+    render(
+      <AppProvider>
+        <I18nProvider>
+          <Settings />
+        </I18nProvider>
+      </AppProvider>,
+    );
+  }
+
+  it('exposes the workday start, the one reconstruction setting that was missing', () => {
+    renderSettings();
+    const field = screen.getByLabelText('Workday start') as HTMLInputElement;
+    expect(field.value).toBe('07:00');
+    fireEvent.change(field, { target: { value: '08:30' } });
+    expect((screen.getByLabelText('Workday start') as HTMLInputElement).value).toBe('08:30');
+  });
+
+  it('names the language switch for assistive technology', () => {
+    renderSettings();
+    expect(screen.getByLabelText('Switch the interface language')).toBeDefined();
+  });
+
+  it('asks twice before erasing, and steps back on cancel', async () => {
+    const user = userEvent.setup();
+    renderSettings();
+    await user.click(screen.getByRole('button', { name: 'Erase all data' }));
+    expect(
+      screen.getByText('Erase every piece of data stored in this browser?'),
+    ).toBeDefined();
+    // Nothing is erased yet: the question is on screen, the data is untouched.
+    expect(screen.queryByRole('button', { name: 'Erase all data' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('button', { name: 'Erase all data' })).toBeDefined();
+  });
+});
+
