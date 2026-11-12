@@ -139,10 +139,21 @@ describe('Evidence — the block panel', () => {
     expect(screen.getByText('30m')).toBeDefined();
     expect(screen.getByRole('heading', { name: 'Acme' })).toBeDefined();
 
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Back' }));
+    // The gesture that leaves the panel says what it does, not just "Back".
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Close the evidence panel' }));
     await waitFor(() => {
       expect(screen.getByText('Select a block to see the proofs it rests on.')).toBeDefined();
     });
+  });
+
+  it('names the confidence grade of the block for assistive technology', async () => {
+    renderEvidence([MEETING, COMMIT]);
+    await openTheBlock();
+    const graded = screen.getByLabelText(/^Confidence: /);
+    expect(graded.textContent).toMatch(/Solid|Likely|To confirm/);
+    // The word is on screen too: a grade carried by an aria-label alone is a
+    // grade only one kind of reader ever sees.
+    expect(graded.textContent?.trim()).not.toBe('');
   });
 
   it('shows the file and the line of a note proof', async () => {

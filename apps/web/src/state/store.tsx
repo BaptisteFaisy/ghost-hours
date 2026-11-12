@@ -7,6 +7,7 @@ import { removeRule, upsertRule } from '@ghost-hours/mapping';
 import { loadSampleMonth } from '@ghost-hours/fixture-sample-month';
 import { mergeEvidence, reconstruct } from './reconstruct.ts';
 import { clearState, loadState, saveState } from './persistence.ts';
+import type { StorageWarning } from './types.ts';
 import { appendAudit, AUDITED_ACTIONS, describeAction } from './audit.ts';
 import { reconstructAsync, shouldUseWorker } from './reconstructAsync.ts';
 import type { ReconstructionOutcome } from './reconstruct.ts';
@@ -484,18 +485,22 @@ function useDeferredReconstruction(
  * landed. A failed write is reported in the state, never thrown: losing a
  * gesture silently is worse than showing a warning.
  */
-function usePersist(state: AppState, hydrated: boolean, setSaveError: (message: string | null) => void): void {
+function usePersist(
+  state: AppState,
+  hydrated: boolean,
+  setWarning: (warning: StorageWarning | null) => void,
+): void {
   useEffect(() => {
     if (!hydrated) return;
     let cancelled = false;
     void saveState(toPersisted(state)).then((result) => {
       if (cancelled || result.ok) return;
-      setSaveError(result.errors.join('; '));
+      setWarning({ kind: 'write', reason: result.errors.join('; ') });
     });
     return () => {
       cancelled = true;
     };
-  }, [hydrated, state, setSaveError]);
+  }, [hydrated, state, setWarning]);
 }
 
 /* ---------------------------------------------------------- the shell -- */
@@ -503,7 +508,7 @@ function usePersist(state: AppState, hydrated: boolean, setSaveError: (message: 
 export function AppProvider(props: { children: ReactNode }): JSX.Element {
   const [state, rawDispatch] = useReducer(reduce, initialState(EMPTY_SETTINGS));
   const [hydrated, setHydrated] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [storageWarning, setStorageWarning] = useState<StorageWarning | null>(null);
   // Restoring from IndexedDB is asynchronous: a gesture made in the first
   // milliseconds must not be erased by the restored state, so it is replayed
   // on top of it once the restore lands.
@@ -521,7 +526,7 @@ export function AppProvider(props: { children: ReactNode }): JSX.Element {
     void loadState().then((result) => {
       if (cancelled) return;
       if (!result.ok) {
-        setSaveError(result.errors.join('; '));
+        setStorageWarning({ kind: result.kind, reason: result.errors.join('; ') });
         return;
       }
       const restored = result.value;
@@ -543,9 +548,12 @@ export function AppProvider(props: { children: ReactNode }): JSX.Element {
     };
   }, []);
 
-  usePersist(state, hydrated, setSaveError);
+  usePersist(state, hydrated, setStorageWarning);
 
-  const value = useMemo<AppState>(() => withStorageWarning(state, saveError), [saveError, state]);
+  const value = useMemo<AppState>(
+    () => withStorageWarning(state, storageWarning),
+    [storageWarning, state],
+  );
 
   return (
     <AppStateContext.Provider value={value}>
@@ -555,15 +563,15 @@ export function AppProvider(props: { children: ReactNode }): JSX.Element {
 }
 
 /**
- * Fold a refused write into the state: the raw reason stays in the import
+ * Fold a storage failure into the state: the raw reason stays in the import
  * report of the settings screen, and the shell gets a field it can announce.
  */
-function withStorageWarning(state: AppState, saveError: string | null): AppState {
-  if (saveError === null) return state;
+function withStorageWarning(state: AppState, warning: StorageWarning | null): AppState {
+  if (warning === null) return state;
   return {
     ...state,
-    importReport: [...state.importReport, saveError],
-    storageWarning: saveError,
+    importReport: [...state.importReport, warning.reason],
+    storageWarning: warning,
   };
 }
 

@@ -8,6 +8,9 @@ import { Evidence } from './screens/Evidence.tsx';
 import { Clients } from './screens/Clients.tsx';
 import { Invoice } from './screens/Invoice.tsx';
 import { Settings } from './screens/Settings.tsx';
+import { ImportPanel } from './components/ImportPanel.tsx';
+import type { StorageWarning } from './state/types.ts';
+import type { MessageKey } from './i18n/index.ts';
 
 /**
  * The application shell (D.11).
@@ -83,14 +86,25 @@ function Shell(): JSX.Element {
  * reload announces itself where the reader is looking — the import report of
  * the settings screen is a trace, not a warning.
  */
+/**
+ * One sentence per way the storage can fail, because they do not mean the same
+ * thing: a refused write means this session will not survive a reload, an
+ * unreadable or invalid read means the previous session is gone.
+ */
+const STORAGE_MESSAGE: Readonly<Record<StorageWarning['kind'], MessageKey>> = {
+  read: 'error.persistRead',
+  parse: 'error.persistParse',
+  write: 'error.persistence',
+};
+
 function StorageWarning(): JSX.Element | null {
   const { t } = useI18n();
   const { storageWarning } = useApp();
   if (storageWarning == null) return null;
   return (
     <p className="storage-warning" role="alert">
-      <strong>{t('error.persistence')}</strong> {t('error.persistWrite')}{' '}
-      <span className="numeric">{storageWarning}</span>
+      <strong>{t(STORAGE_MESSAGE[storageWarning.kind])}</strong>{' '}
+      <span className="numeric">{storageWarning.reason}</span>
     </p>
   );
 }
@@ -135,9 +149,16 @@ function Screen(props: { view: View }): JSX.Element {
   }
 }
 
+/**
+ * Nothing loaded yet: the one click that makes the app alive, and the door to
+ * the reader's own files. The import panel opens in place — the shell shows
+ * this state instead of the screens, so sending the reader to Settings would
+ * have gone nowhere.
+ */
 function EmptyState(): JSX.Element {
   const { t } = useI18n();
   const dispatch = useDispatch();
+  const [importing, setImporting] = useState(false);
   return (
     <div className="empty-state">
       <h1>{t('empty.title')}</h1>
@@ -148,7 +169,15 @@ function EmptyState(): JSX.Element {
         onClick={() => dispatch({ type: 'loadSampleMonth' })}
       >
         {t('empty.loadSample')}
+      </button>{' '}
+      <button
+        type="button"
+        aria-expanded={importing}
+        onClick={() => setImporting((open) => !open)}
+      >
+        {t('empty.import')}
       </button>
+      {importing && <ImportPanel />}
     </div>
   );
 }

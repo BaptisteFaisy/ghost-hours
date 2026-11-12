@@ -31,6 +31,18 @@ export interface PendingReconstruction {
   readonly corrections: readonly LeadInCorrection[];
 }
 
+/**
+ * What went wrong with the browser's storage, and why it matters differently:
+ * a refused **write** means the work will not survive a reload, an unreadable
+ * or invalid **read** means the previous session is gone and this one starts
+ * empty. Three situations, three sentences — never the same shrug.
+ */
+export interface StorageWarning {
+  readonly kind: 'read' | 'parse' | 'write';
+  /** The browser's own reason, kept verbatim: a warning that hides its cause cannot be acted on. */
+  readonly reason: string;
+}
+
 export interface AppState {
   readonly status: 'empty' | 'ready';
   readonly locale: SupportedLocale;
@@ -58,7 +70,7 @@ export interface AppState {
    * as an alert: a review that will not survive a reload must say so up front,
    * not only in the import report of the settings screen.
    */
-  readonly storageWarning?: string | null;
+  readonly storageWarning?: StorageWarning | null;
   /** Lead-in calibration proposal (HEU-F-17); null until there are ten corrections. */
   readonly calibration: Calibration | null;
   /** Local, chained audit trail of every decision (never leaves the browser). */
