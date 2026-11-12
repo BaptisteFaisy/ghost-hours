@@ -44,10 +44,12 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      # Le dépôt entier, depuis le lockfile : la suite e2e importe les chiffres
-      # attendus des deux fixtures, donc les paquets workspace doivent exister.
+      # La racine seulement : la suite e2e n'a besoin que de Playwright et des
+      # deux `expected.json`, qu'elle lit directement dans `fixtures/` — aucun
+      # paquet workspace, aucun build. Sur un runner macOS sans cache c'est la
+      # différence entre tenir et exploser le budget de cinq minutes.
       - name: Install
-        run: pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
+        run: pnpm install --frozen-lockfile --prefer-offline --ignore-scripts --filter=.
 
       - name: WebKit
         run: pnpm exec playwright install webkit
