@@ -46,6 +46,12 @@ export function commitToEvidence(input: CommitEvidenceInput): Evidence {
     ...(remote === null ? {} : { remote }),
     ...(commit.branch === null ? {} : { branch: commit.branch }),
     ...(summaries && commit.summary !== null ? { summary: commit.summary } : {}),
+    // What the proof rests on: Git's own letters, the signer and the committer.
+    signature: commit.signature,
+    ...(commit.signer === null ? {} : { signer: commit.signer }),
+    ...(commit.keyFingerprint === null ? {} : { keyFingerprint: commit.keyFingerprint }),
+    ...(commit.committerEmail.length === 0 ? {} : { committerEmail: commit.committerEmail }),
+    ...(commit.committedAt === null ? {} : { committedAt: commit.committedAt }),
   };
 }
 
