@@ -205,6 +205,8 @@ export const en = {
   'settings.halfDayFrom': 'Half day from (minutes)',
   'settings.data': 'Data',
   'settings.loadSample': 'Load the sample month',
+  'settings.anchorHint':
+    'Freeze today’s proofs: run `node scripts/anchor-evidence.mjs add evidence.json anchors.jsonl`, then publish that file where your client cannot edit it.',
   'settings.exportData': 'Export the data (JSON)',
   'settings.eraseData': 'Erase all data',
   'settings.eraseConfirm': 'Erase every piece of data stored in this browser?',
@@ -243,6 +245,7 @@ export const en = {
   'invoice.nextPeriod': 'Next month',
   'invoice.noClient': 'No client yet — create one on the Clients screen.',
   'invoice.printHint': 'The print dialog is the PDF: nothing is uploaded anywhere.',
+  'invoice.signedShare': 'Proofs behind this draft that carry a signature',
   'invoice.markInvoicedExplain':
     'Confirmed blocks of this period will be locked: a later reconstruction leaves them untouched.',
   'invoice.exportHint': 'Exports are built in this tab and downloaded by the browser.',
