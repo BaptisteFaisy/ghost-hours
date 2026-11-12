@@ -84,6 +84,47 @@ Design notes: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 Acceptance checklist: [`docs/ACCEPTANCE.md`](docs/ACCEPTANCE.md).
 Continuous integration: [`docs/CI.md`](docs/CI.md).
 
+## How it avoids inflating the hours
+
+The strongest objection to this product is that it could be a machine for inflating invoices. The
+answer is not a disclaimer: it is a set of invariants, each one implemented and tested. The tool
+proposes, the human confirms — and here is what keeps the proposals honest.
+
+- **Only hand-confirmed blocks are billable.** `proposed`, `conflict` and `rejected` blocks are
+  invisible to billing, in every mode; the output stays a `Draft`, with no invoice number —
+  `packages/billing/src/blocks.ts`, `packages/billing/src/draft.ts`.
+- **Assumed lead-ins are bounded, never extrapolated.** The assumed warm-up before a first proof is
+  30 min by default, clamped by the previous proof and by `workdayStart`, inside a 120-min window;
+  nothing is added after the last proof (`tailMinutes` defaults to 0) —
+  `packages/sessionizer/src/sessions.ts`, defaults in `packages/core/src/settings.ts`, bound locked
+  by property HEU-P-07 in `packages/sessionizer/src/properties.test.ts`.
+- **Every assumed minute is visible.** Each block carries its `provenShare` and its
+  `assumedLeadInMinutes`, graded solid ≥ 0.8 / likely ≥ 0.5 / to-confirm —
+  `packages/core/src/types.ts`, `packages/sessionizer/src/blocks.ts`.
+- **Breaks are not billed.** A hole longer than `breakMaxMinutes` (60) splits the session: lunch
+  stays lunch — `packages/sessionizer/src/sessions.ts`.
+- **No day exceeds a day.** A client is never billed more than one day per calendar day, and days
+  over-booked across clients are flagged, not merged — `packages/billing/src/caps.ts`; property
+  HEU-P-02 in `packages/sessionizer/src/properties.test.ts`.
+- **Bots are set aside — and listed.** Dependency bots, merge queues and CI commits never count as
+  proof, but they land in `ignoredEvidence`: a filter that hides what it dropped is a filter nobody
+  can audit — `packages/sessionizer/src/noise.ts`, shown in `apps/web/src/screens/Settings.tsx`.
+- **Contradictions are never settled by the product.** An overlap between two clients becomes a
+  `conflict` block, unbillable until a human picks one of three gestures: keep one side, keep the
+  other, or share the minutes — `apps/web/src/screens/Conflicts.tsx`, `apps/web/src/state/store.tsx`.
+- **The bulk gesture stays prudent.** *Confirm everything solid* confirms only the `proposed`
+  blocks whose proven share reaches 0.8; everything else stays queued for review —
+  `apps/web/src/screens/Month.tsx`, `apps/web/src/state/store.tsx`.
+- **Every decision leaves a chained trace.** Each audit entry hashes the previous fingerprint, so a
+  line edited or removed afterwards breaks the chain — `apps/web/src/state/audit.ts`.
+- **Nothing leaves the machine.** No network request after the page loads, no account, no server —
+  enforced in CI and on save by `scripts/check-no-network.mjs` (HEU-N-01).
+
+What it never does: round up by default (the rule is `nearest`, 15 minutes, per day —
+`packages/core/src/settings.ts` — and it is printed on the draft, `packages/billing/src/rounding.ts`),
+invent time no source supports, bill a conflict, or present the draft as an invoice. These rules
+live in `.kiro/steering/prudence.md`, and the read-only `prudence-reviewer` agent checks them.
+
 ## How it was built with Kiro
 
 The `.kiro/` folder is part of the product, not decoration:
