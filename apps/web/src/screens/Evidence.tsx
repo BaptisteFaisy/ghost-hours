@@ -26,31 +26,18 @@ const KIND_KEYS: Readonly<Record<EvidenceKind, MessageKey>> = {
   manual: 'evidence.manual',
 };
 
-/** Keys the dictionaries do not carry yet — reported, never invented. */
-export type ExtraPair = { readonly en: string; readonly fr: string };
+/** The fields a proof can carry, each with the key that names it (D.4). */
+type ProofField = 'repo' | 'branch' | 'author' | 'added' | 'deleted' | 'file' | 'line';
 
-const EXTRA_EVIDENCE: Readonly<Record<string, ExtraPair>> = {
-  'evidence.file': { en: 'File', fr: 'Fichier' },
-  'evidence.line': { en: 'Line', fr: 'Ligne' },
+const FIELD_KEYS: Readonly<Record<ProofField, MessageKey>> = {
+  repo: 'evidence.repo',
+  branch: 'evidence.branch',
+  author: 'evidence.author',
+  added: 'evidence.added',
+  deleted: 'evidence.deleted',
+  file: 'evidence.file',
+  line: 'evidence.line',
 };
-
-/**
- * Translate a key the dictionaries may not carry yet: `t()` first, so a key
- * added later to `i18n/en.ts` and `i18n/fr.ts` wins on its own, and the local
- * pair of strings until then. Never shows a bare key to the user.
- */
-export function useText(
-  fallbacks: Readonly<Record<string, ExtraPair>>,
-): (key: string) => string {
-  const { t, locale } = useI18n();
-  return (key) => {
-    const translated = t(key as MessageKey);
-    if (translated !== key) return translated;
-    const pair = fallbacks[key];
-    if (pair === undefined) return key;
-    return locale === 'fr' ? pair.fr : pair.en;
-  };
-}
 
 export function Evidence(): JSX.Element {
   const state = useApp();
@@ -239,8 +226,7 @@ function instantLabel(
 /** The fields a proof carries, by source (D.4). */
 function ProofFields(props: { readonly proof: Evidence }): JSX.Element {
   const { t } = useI18n();
-  const text = useText(EXTRA_EVIDENCE);
-  const rows = proofRows(props.proof, text);
+  const rows = proofRows(props.proof, t);
   return (
     <span className="evidence-fields">
       {rows.map((row) => (
@@ -268,10 +254,13 @@ interface ProofRow {
 }
 
 /** One row per field the proof carries; nothing is invented. */
-function proofRows(proof: Evidence, text: (key: string) => string): readonly ProofRow[] {
-  const row = (key: string, value: string | number): ProofRow => ({
-    key,
-    label: text(`evidence.${key}`),
+function proofRows(
+  proof: Evidence,
+  translate: (key: MessageKey) => string,
+): readonly ProofRow[] {
+  const row = (field: ProofField, value: string | number): ProofRow => ({
+    key: field,
+    label: translate(FIELD_KEYS[field]),
     value,
   });
   const rows: ProofRow[] = [];
