@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { credibilitySignals, isClean, isUnsigned, signedShare } from './credibility.ts';
-import type { Evidence } from './types.ts';
+import {
+  assumedShareOfBlock,
+  credibilitySignals,
+  isAssumptionDominant,
+  isClean,
+  isUnsigned,
+  signedShare,
+} from './credibility.ts';
+import type { Block, Evidence } from './types.ts';
 
 const commit = (patch: Partial<Evidence> = {}): Evidence => ({
   id: 'git:r:1',
@@ -41,6 +48,40 @@ describe('credibilitySignals', () => {
 
   it('leaves a checkout alone', () => {
     expect(credibilitySignals(commit({ kind: 'checkout', signature: undefined }))).toEqual([]);
+  });
+});
+
+describe('the assumed share of a block', () => {
+  const block = (patch: Partial<Block> = {}): Block => ({
+    id: 'b1',
+    start: 1_700_000_000_000,
+    end: 1_700_000_000_000 + 60 * 60_000,
+    clientId: 'acme',
+    projectId: null,
+    status: 'proposed',
+    origin: 'git',
+    provenShare: 1,
+    confidence: 'solid',
+    assumedLeadInMinutes: 0,
+    evidenceIds: [],
+    locked: false,
+    adjusted: false,
+    ...patch,
+  });
+
+  it('is zero when the block is fully proven', () => {
+    expect(assumedShareOfBlock(block())).toBe(0);
+    expect(isAssumptionDominant(block())).toBe(false);
+  });
+
+  it('flags a block that rests mostly on the assumed start', () => {
+    const assumed = block({ assumedLeadInMinutes: 45 });
+    expect(assumedShareOfBlock(assumed)).toBe(0.75);
+    expect(isAssumptionDominant(assumed)).toBe(true);
+  });
+
+  it('does not flag a block whose proof outweighs the courtesy', () => {
+    expect(isAssumptionDominant(block({ assumedLeadInMinutes: 20 }))).toBe(false);
   });
 });
 

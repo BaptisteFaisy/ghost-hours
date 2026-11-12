@@ -1,5 +1,12 @@
 import type { Block, CredibilitySignal, Evidence, EvidenceKind, Instant } from '@ghost-hours/core';
-import { credibilitySignals, formatPercent, isClean, monthRangeInZone, signedShare } from '@ghost-hours/core';
+import {
+  credibilitySignals,
+  formatPercent,
+  isAssumptionDominant,
+  isClean,
+  monthRangeInZone,
+  signedShare,
+} from '@ghost-hours/core';
 import { sortEvidence } from '@ghost-hours/mapping';
 import { useApp, useDispatch } from '../state/store.tsx';
 import { blockById, clientById, evidenceOfBlock } from '../state/selectors.ts';
@@ -160,6 +167,11 @@ function BlockPanel(props: BlockPanelProps): JSX.Element {
     <div className="evidence-panel">
       <BlockHeader block={block} proofs={proofs} clientName={props.clientName} />
 
+      {isAssumptionDominant(block) && (
+        <p className="evidence-assumed-warning" role="note">
+          {t('evidence.assumedDominant')}
+        </p>
+      )}
       <dl className="counter" aria-label={t('a11y.provenShare', { share: proven })}>
         <div className="counter-item">
           <dt>{t('week.proven')}</dt>
