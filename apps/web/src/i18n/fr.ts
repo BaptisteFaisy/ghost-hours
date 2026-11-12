@@ -245,6 +245,8 @@ export const fr: Dictionary = {
   'invoice.noClient': 'Aucun client pour l’instant — créez-en un dans l’écran Clients.',
   'invoice.printHint': 'La boîte d’impression tient lieu de PDF : rien n’est envoyé.',
   'invoice.signedShare': 'Preuves signées derrière ce brouillon',
+  'evidence.assumedDominant':
+    'L’amorce supposée pèse plus lourd que la preuve : ce bloc repose surtout sur la marge accordée avant un commit. À regarder de près.',
   'invoice.markInvoicedExplain':
     'Les blocs confirmés de cette période seront verrouillés : une reconstitution ultérieure n’y touchera pas.',
   'invoice.exportHint': 'Les exports sont construits dans cet onglet, puis téléchargés par le navigateur.',

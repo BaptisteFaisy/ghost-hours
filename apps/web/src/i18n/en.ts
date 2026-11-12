@@ -246,6 +246,8 @@ export const en = {
   'invoice.noClient': 'No client yet — create one on the Clients screen.',
   'invoice.printHint': 'The print dialog is the PDF: nothing is uploaded anywhere.',
   'invoice.signedShare': 'Proofs behind this draft that carry a signature',
+  'evidence.assumedDominant':
+    'The assumed start outweighs the proof here: this block rests mostly on the courtesy granted before a commit. Worth a second look.',
   'invoice.markInvoicedExplain':
     'Confirmed blocks of this period will be locked: a later reconstruction leaves them untouched.',
   'invoice.exportHint': 'Exports are built in this tab and downloaded by the browser.',
