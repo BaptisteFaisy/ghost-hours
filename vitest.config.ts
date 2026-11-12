@@ -10,6 +10,9 @@ export default defineConfig({
       'packages/*/src/**/*.test.ts',
       'apps/*/src/**/*.test.{ts,tsx}',
       'fixtures/*/**/*.test.ts',
+      // The tools under `scripts/` are CLI programs: they are tested by
+      // running them, not by importing them.
+      'scripts/**/*.test.mjs',
     ],
     environment: 'node',
     reporters: ['default'],
