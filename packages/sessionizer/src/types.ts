@@ -25,8 +25,7 @@ export interface Session {
   /** How the start was decided, so the block can explain itself. */
   readonly startKind: 'checkout' | 'assumed' | 'resume';
   /** What bounds an assumed lead-in, when there is one. */
-  /** `day-cap`: the day already spent its assumed start, so this one assumes nothing. */
-  readonly boundedBy: 'previous-proof' | 'workday-start' | 'none' | 'day-cap';
+  readonly boundedBy: 'previous-proof' | 'workday-start' | 'none';
   /** Length of the pause before this session, when it follows a break. */
   readonly pauseMinutes: Minutes;
 }
