@@ -164,7 +164,7 @@ function AutomationPanel(): JSX.Element {
               <th scope="col">{t('common.day')}</th>
               <th scope="col">{t('common.time')}</th>
               <th scope="col">{t('common.client')}</th>
-              <th scope="col">Author</th>
+              <th scope="col">{t('common.author')}</th>
             </tr>
           </thead>
           <tbody>
