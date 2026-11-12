@@ -22,6 +22,15 @@ export interface CommitRecord {
   readonly branch: string | null;
   readonly added: number;
   readonly deleted: number;
+  /** Git's own signature letter (`%G?`): `G`, `B`, `U`, `X`, `Y`, `R`, `E`, `N`. */
+  readonly signature: string;
+  /** Signer name (`%GS`) and key fingerprint (`%GK`); `null` when Git reports none. */
+  readonly signer: string | null;
+  readonly keyFingerprint: string | null;
+  /** The committer (`%ce`), not the author: a rebase keeps the author and moves the committer. */
+  readonly committerEmail: string;
+  /** The commit instant (`%cI`); `null` when Git does not report it. */
+  readonly committedAt: Instant | null;
 }
 
 export interface CommitFilter {
@@ -38,9 +47,15 @@ function authorArguments(authors: readonly string[]): string[] {
   return args;
 }
 
-/** The argv used to read commits; exported so the read-only guard can be tested on it. */
+/**
+ * The argv used to read commits; exported so the read-only guard can be tested on it.
+ *
+ * The five signature fields (`%G?`, `%GS`, `%GK`, `%ce`, `%cI`) come after the
+ * identity ones. The subject stays the last field: it is free text, and a
+ * subject containing the field separator must not shift the values before it.
+ */
 export function buildLogArgs(filter: CommitFilter): readonly string[] {
-  const fields = ['%H', '%an', '%ae', '%aI', '%S'];
+  const fields = ['%H', '%an', '%ae', '%aI', '%S', '%G?', '%GS', '%GK', '%ce', '%cI'];
   if (filter.summaries) fields.push('%s');
   return [
     'log',
@@ -98,14 +113,38 @@ export function branchFromRef(ref: string | undefined): string | null {
   return null;
 }
 
+/** The fields read for every commit, in the order `buildLogArgs` writes them. */
+const FIELD_COUNT = 10;
+
+/** The subject is read only with summaries; it always comes last. */
+const SUMMARY_INDEX = FIELD_COUNT;
+
+/** Git writes `N` for an unsigned commit; some versions leave the field empty. */
+function signatureLetter(raw: string | undefined): string {
+  const value = (raw ?? '').trim();
+  return value.length === 0 ? 'N' : value;
+}
+
+/** An empty value means "Git reported nothing": the field is then absent, not empty. */
+function optionalText(raw: string | undefined): string | null {
+  const value = (raw ?? '').trim();
+  return value.length === 0 ? null : value;
+}
+
+/** An instant that cannot be read is absent, never guessed. */
+function parseInstant(raw: string | undefined): Instant | null {
+  const parsed = Date.parse((raw ?? '').trim());
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function parseChunk(chunk: string, summaries: boolean): CommitRecord | null {
   const text = chunk.trim();
   if (text.length === 0) return null;
   const newline = text.indexOf('\n');
   const header = newline === -1 ? text : text.slice(0, newline);
   const body = newline === -1 ? '' : text.slice(newline + 1);
-  const fields = splitFields(header, summaries ? 6 : 5);
-  const [sha, authorName, authorEmail, authorDate, source] = fields;
+  const fields = splitFields(header, summaries ? FIELD_COUNT + 1 : FIELD_COUNT);
+  const [sha, authorName, authorEmail, authorDate, source, signature, signer, key, committer, committed] = fields;
   if (sha === undefined || !/^[0-9a-f]{7,64}$/.test(sha)) return null;
   const authorAt = Date.parse(authorDate ?? '');
   if (!Number.isFinite(authorAt)) return null;
@@ -115,10 +154,15 @@ function parseChunk(chunk: string, summaries: boolean): CommitRecord | null {
     authorName: authorName ?? '',
     authorEmail: authorEmail ?? '',
     authorAt,
-    summary: summaries ? (fields[5] ?? '') : null,
+    summary: summaries ? (fields[SUMMARY_INDEX] ?? '') : null,
     branch: branchFromRef(source),
     added: stats.added,
     deleted: stats.deleted,
+    signature: signatureLetter(signature),
+    signer: optionalText(signer),
+    keyFingerprint: optionalText(key),
+    committerEmail: committer ?? '',
+    committedAt: parseInstant(committed),
   };
 }
 
