@@ -75,8 +75,13 @@ jobs:
           find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name 'README.md' -exec rm -rf {} +
           cp -r "$GITHUB_WORKSPACE/apps/web/dist/." .
           touch .nojekyll
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # L'identité du propriétaire, pas celle du bot : le garde-fou
+          # anti-faux-contributeur installé sur le runner refuse un commit signé
+          # `github-actions[bot]`, et il a raison — un bot qui signe à la place
+          # du propriétaire crée un contributeur fantôme. Le push passe par le
+          # jeton du propriétaire, l'auteur doit être le propriétaire.
+          git config user.name "BaptisteFaisy"
+          git config user.email "119856854+BaptisteFaisy@users.noreply.github.com"
           git add -A
           if git diff --cached --quiet; then
             echo "site inchangé — rien à publier"
