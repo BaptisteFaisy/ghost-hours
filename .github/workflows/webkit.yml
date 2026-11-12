@@ -13,6 +13,17 @@ on:
   workflow_run:
     workflows: ["Deploy (GitHub Pages)"]
     types: [completed]
+  # Un déploiement ne change que l'application : une PR qui ne touche que la
+  # suite e2e ne redéploie rien, et la ligne Safari n'était donc pas rejouée
+  # sur elle. Ici, toute modification de la suite ou du produit la rejoue.
+  push:
+    branches: [main]
+    paths:
+      - "e2e/**"
+      - "apps/**"
+      - "packages/**"
+      - "fixtures/**"
+      - ".github/workflows/webkit.yml"
 
 concurrency:
   group: webkit-${{ github.event_name }}-${{ github.ref }}
