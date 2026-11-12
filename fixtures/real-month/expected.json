@@ -1,0 +1,35 @@
+{
+  "period": {
+    "year": 2026,
+    "month": 10
+  },
+  "timeZone": "Europe/Paris",
+  "evidenceCount": 977,
+  "orphanCount": 0,
+  "ignoredAutomation": 0,
+  "foundMinutes": 2052,
+  "confirmedMinutes": 0,
+  "declaredMinutes": null,
+  "ghostMinutes": null,
+  "ghostAmountCents": null,
+  "blockCount": 21,
+  "conflictCount": 7,
+  "unprovenBlocks": 12,
+  "solidBlocks": 9,
+  "activeDays": 13,
+  "assumedLeadInMinutes": 210,
+  "perClient": {
+    "projet-1": {
+      "foundMinutes": 352,
+      "blockCount": 7
+    },
+    "projet-2": {
+      "foundMinutes": 34,
+      "blockCount": 2
+    },
+    "projet-3": {
+      "foundMinutes": 1666,
+      "blockCount": 12
+    }
+  }
+}

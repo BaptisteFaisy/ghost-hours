@@ -109,6 +109,22 @@ importers:
         specifier: ^5.4.11
         version: 5.4.21(@types/node@22.20.5)
 
+  fixtures/real-month:
+    dependencies:
+      '@ghost-hours/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@ghost-hours/notes':
+        specifier: workspace:*
+        version: link:../../packages/notes
+    devDependencies:
+      '@ghost-hours/mapping':
+        specifier: workspace:*
+        version: link:../../packages/mapping
+      '@ghost-hours/sessionizer':
+        specifier: workspace:*
+        version: link:../../packages/sessionizer
+
   fixtures/sample-month:
     dependencies:
       '@ghost-hours/core':
