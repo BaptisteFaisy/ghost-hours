@@ -32,7 +32,7 @@ const BROWSER_CANDIDATES = [
 const executablePath = BROWSER_CANDIDATES.find((path) => existsSync(path));
 
 /** Every project the suite knows, in the order a reviewer would read them. */
-const KNOWN_PROJECTS = ['chromium', 'firefox', 'webkit', 'mobile-chromium', 'mobile-safari'] as const;
+const KNOWN_PROJECTS = ['chromium', 'firefox', 'webkit', 'mobile-chromium', 'mobile-small', 'mobile-safari'] as const;
 
 type ProjectName = (typeof KNOWN_PROJECTS)[number];
 
@@ -93,6 +93,17 @@ const PROJECTS: PlaywrightTestProject[] = [
     // so the CI server runs the phone suite without downloading anything.
     use: {
       ...devices['iPhone 13'],
+      browserName: 'chromium' as const,
+      launchOptions: executablePath === undefined ? {} : { executablePath, args: ['--no-sandbox'] },
+    },
+  },
+  {
+    name: 'mobile-small',
+    ...MOBILE,
+    // iPhone SE: 320×568. The small phone is where a layout breaks first —
+    // the six tabs, the tables, the gestures.
+    use: {
+      ...devices['iPhone SE'],
       browserName: 'chromium' as const,
       launchOptions: executablePath === undefined ? {} : { executablePath, args: ['--no-sandbox'] },
     },

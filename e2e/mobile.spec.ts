@@ -92,3 +92,65 @@ test('phone 4 — a thumb reaches every destination', async ({ page }) => {
     expect(heading.length, `${view} rendered nothing`).toBeGreaterThan(20);
   }
 });
+
+/**
+ * The two rules a phone has and a desktop does not: a thumb needs a target big
+ * enough to hit, and a finger needs a field big enough to read — under 16 px,
+ * iOS Safari zooms the whole page in on focus and leaves it there.
+ *
+ * These are assertions, not advice: they run after every deployment, on the
+ * phone viewport and on the small phone viewport, so a regression is caught by
+ * CI rather than by a reader.
+ */
+
+test('phone 5 — every gesture is a target a thumb can hit', async ({ page }) => {
+  await loadSampleMonth(page);
+  for (const view of ['Month', ...VIEWS]) {
+    await gotoView(page, view);
+    await page.waitForTimeout(350);
+    const small = await page.evaluate(() => {
+      const out: string[] = [];
+      for (const el of document.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea')) {
+        if (el.closest('.visually-hidden') !== null) continue;
+        if (el.classList.contains('skip-link')) continue;
+        // A checkbox is 24 px on purpose: its label is the target, and the
+        // label is not an element of this list.
+        if (el.getAttribute('type') === 'checkbox') continue;
+        const style = getComputedStyle(el);
+        if (style.display === 'none' || style.visibility === 'hidden') continue;
+        const box = el.getBoundingClientRect();
+        if (box.width === 0 || box.height === 0) continue;
+        if (box.width < 40 || box.height < 40) {
+          const label = (el.getAttribute('aria-label') ?? el.textContent ?? el.tagName)
+            .trim()
+            .replace(/\s+/g, ' ')
+            .slice(0, 40);
+          out.push(`${el.tagName} "${label}" ${Math.round(box.width)}×${Math.round(box.height)}`);
+        }
+      }
+      return out;
+    });
+    expect(small, `view ${view}: gestures smaller than 40 px`).toEqual([]);
+  }
+});
+
+test('phone 6 — no field is small enough to make iOS zoom in', async ({ page }) => {
+  await loadSampleMonth(page);
+  for (const view of ['Month', ...VIEWS]) {
+    await gotoView(page, view);
+    await page.waitForTimeout(350);
+    const tiny = await page.evaluate(() => {
+      const out: string[] = [];
+      for (const el of document.querySelectorAll<HTMLElement>('input, select, textarea')) {
+        if (el.closest('.visually-hidden') !== null) continue;
+        const size = parseFloat(getComputedStyle(el).fontSize);
+        if (size < 16) {
+          out.push(`${el.tagName} "${el.getAttribute('aria-label') ?? ''}" ${size}px`);
+        }
+      }
+      return out;
+    });
+    expect(tiny, `view ${view}: fields under 16 px (iOS zooms on focus)`).toEqual([]);
+  }
+});
+

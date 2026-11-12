@@ -27,13 +27,26 @@ import { ManualBlockForm } from '../components/ManualBlockForm.tsx';
 /** Which of the two equivalent views of the week the screen shows. */
 export type WeekViewMode = 'grid' | 'table';
 
+/**
+ * The view a phone opens on.
+ *
+ * The grid is a timeline: a column is 48 px wide, so the gestures inside it
+ * are glyphs a thumb cannot hit. The table lists the blocks with full-width
+ * gestures — on a phone, that is the view that works. On a desktop the grid
+ * stays the default: it is the contract the desktop suite relies on.
+ */
+function defaultViewMode(): WeekViewMode {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'grid';
+  return window.matchMedia('(max-width: 720px)').matches ? 'table' : 'grid';
+}
+
 export function Week(): JSX.Element {
   const state = useApp();
   const { t } = useI18n();
   const timeZone = state.settings.timeZone;
   // The grid stays the default view (the e2e smoke contract expects it on
   // arrival); the choice lives for the whole session of the screen.
-  const [viewMode, setViewMode] = useState<WeekViewMode>('grid');
+  const [viewMode, setViewMode] = useState<WeekViewMode>(defaultViewMode);
 
   const weekStart = useMemo(
     () =>
