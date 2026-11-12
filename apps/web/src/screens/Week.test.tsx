@@ -51,15 +51,18 @@ describe('Week', () => {
     clearBrowserStorage();
   });
 
-  it('shows the seven days of the week in the grid and in the table', async () => {
+  it('shows the seven days of the week in the grid and in the table view', async () => {
+    const user = userEvent.setup();
     renderWeek();
     const region = await grid();
-    const table = await screen.findByRole('table', { name: TABLE });
     const gridDays = dayKeysOf(region);
+    expect(gridDays.length).toBe(7);
+    // The two views are exclusive: switch to the table to compare the days.
+    await user.click(screen.getByRole('button', { name: 'Table view' }));
+    const table = await screen.findByRole('table', { name: TABLE });
     const tableDays = [...table.querySelectorAll('th[data-day]')]
       .map((cell) => cell.getAttribute('data-day'))
       .filter((key): key is string => key !== null);
-    expect(gridDays.length).toBe(7);
     expect(new Set(tableDays)).toEqual(new Set(gridDays));
   });
 
@@ -128,5 +131,64 @@ describe('Week — declaring a block by hand (HEU-F-05)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add a block' }));
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('region', { name: 'Add a block by hand' })).toBeNull();
+  });
+});
+
+describe('Week — the explicit choice between grid and table', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    stubBrowserStorage();
+    clearBrowserStorage();
+  });
+
+  it('shows the grid on arrival — the e2e smoke contract (smoke.spec.ts requirement 3)', async () => {
+    renderWeek();
+    // smoke.spec.ts: `page.getByRole('grid', { name: /Week grid/i })` visible
+    // right after reaching the Week view, then the first "Confirm the day".
+    const region = await screen.findByRole('grid', { name: /Week grid/i });
+    expect(region).toBeDefined();
+    const confirmDay = (
+      await screen.findAllByRole('button', { name: /Confirm the day/i })
+    )[0];
+    expect(confirmDay).toBeDefined();
+    // The table is not rendered until it is chosen.
+    expect(screen.queryByRole('table', { name: TABLE })).toBeNull();
+  });
+
+  it('switches to the table in one click and removes the grid', async () => {
+    const user = userEvent.setup();
+    renderWeek();
+    await grid();
+    await user.click(screen.getByRole('button', { name: 'Table view' }));
+    await screen.findByRole('table', { name: TABLE });
+    expect(screen.queryByRole('grid', { name: /Week grid/i })).toBeNull();
+  });
+
+  it('reflects the chosen view in aria-pressed and switches back', async () => {
+    const user = userEvent.setup();
+    renderWeek();
+    await grid();
+    const gridButton = screen.getByRole('button', { name: 'Grid view' });
+    const tableButton = screen.getByRole('button', { name: 'Table view' });
+    expect(gridButton.getAttribute('aria-pressed')).toBe('true');
+    expect(tableButton.getAttribute('aria-pressed')).toBe('false');
+    await user.click(tableButton);
+    expect(tableButton.getAttribute('aria-pressed')).toBe('true');
+    expect(gridButton.getAttribute('aria-pressed')).toBe('false');
+    await user.click(gridButton);
+    await grid();
+    expect(gridButton.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByRole('table', { name: TABLE })).toBeNull();
+  });
+
+  it('keeps "Confirm the day" reachable in both views (smoke.spec.ts requirement 3)', async () => {
+    const user = userEvent.setup();
+    renderWeek();
+    await grid();
+    expect((await screen.findAllByRole('button', { name: /Confirm the day/i })).length).toBe(7);
+    await user.click(screen.getByRole('button', { name: 'Table view' }));
+    await screen.findByRole('table', { name: TABLE });
+    expect((await screen.findAllByRole('button', { name: /Confirm the day/i })).length).toBe(7);
   });
 });

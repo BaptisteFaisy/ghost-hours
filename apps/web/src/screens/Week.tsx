@@ -24,10 +24,16 @@ import { ManualBlockForm } from '../components/ManualBlockForm.tsx';
  * must stay under fifteen minutes (D.3).
  */
 
+/** Which of the two equivalent views of the week the screen shows. */
+export type WeekViewMode = 'grid' | 'table';
+
 export function Week(): JSX.Element {
   const state = useApp();
   const { t } = useI18n();
   const timeZone = state.settings.timeZone;
+  // The grid stays the default view (the e2e smoke contract expects it on
+  // arrival); the choice lives for the whole session of the screen.
+  const [viewMode, setViewMode] = useState<WeekViewMode>('grid');
 
   const weekStart = useMemo(
     () =>
@@ -48,11 +54,15 @@ export function Week(): JSX.Element {
       <ManualEntry days={days} />
       <DayButtons days={days} />
       <div className="week-views">
-        <WeekGrid days={days} blocks={blocks} />
-        <section className="week-table-section" aria-label={t('week.tableView')}>
-          <h3>{t('week.tableView')}</h3>
-          <WeekTable days={days} blocks={blocks} />
-        </section>
+        <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+        {viewMode === 'grid' ? (
+          <WeekGrid days={days} blocks={blocks} />
+        ) : (
+          <section className="week-table-section" aria-label={t('week.tableView')}>
+            <h3>{t('week.tableView')}</h3>
+            <WeekTable days={days} blocks={blocks} />
+          </section>
+        )}
       </div>
       <ConflictList conflicts={conflicts} />
       <EvidencePanel blockId={selected === null ? null : selected.id} />
@@ -69,6 +79,40 @@ function defaultWeekStart(year: number, month: number, timeZone: string): Instan
   const range = monthRangeInZone(year, month, timeZone);
   const start = weekStartInZone(range.start, timeZone);
   return start < range.start ? addDaysInZone(start, 7, timeZone) : start;
+}
+
+interface ViewToggleProps {
+  readonly viewMode: WeekViewMode;
+  readonly onChange: (mode: WeekViewMode) => void;
+}
+
+const VIEW_OPTIONS: readonly { mode: WeekViewMode; labelKey: 'week.gridView' | 'week.tableView' }[] = [
+  { mode: 'grid', labelKey: 'week.gridView' },
+  { mode: 'table', labelKey: 'week.tableView' },
+];
+
+/**
+ * The explicit choice between the two equivalent views of the week
+ * (HEU-N-04): one click switches, the pressed button carries `aria-pressed`.
+ */
+function ViewToggle(props: ViewToggleProps): JSX.Element {
+  const { t } = useI18n();
+  return (
+    // TODO(i18n): no existing key names the group of view buttons; the label
+    // is hardcoded in English until a key is added to en.ts / fr.ts.
+    <div className="week-view-toggle" role="group" aria-label="Week display">
+      {VIEW_OPTIONS.map((option) => (
+        <button
+          key={option.mode}
+          type="button"
+          aria-pressed={props.viewMode === option.mode}
+          onClick={() => props.onChange(option.mode)}
+        >
+          {t(option.labelKey)}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 interface WeekToolbarProps {
