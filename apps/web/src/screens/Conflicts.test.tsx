@@ -128,3 +128,23 @@ describe('Conflicts screen — the three gestures', () => {
     expect(screen.getAllByText('Settled').length).toBeGreaterThan(0);
   });
 });
+
+describe('Conflicts — the over-booked days panel', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    stubBrowserStorage();
+    clearBrowserStorage();
+  });
+
+  it('is on screen, named, and states the threshold it applies', async () => {
+    renderConflicts();
+    const panel = await screen.findByRole('region', { name: 'Over-booked days' });
+    await waitFor(() =>
+      expect(within(panel).getByText(/No day exceeds one working day/)).toBeTruthy(),
+    );
+    // The threshold is printed, so the reader can check the claim: 420 min = 7h.
+    expect(within(panel).getByText(/one working day \(7h\)/)).toBeTruthy();
+  });
+});
+

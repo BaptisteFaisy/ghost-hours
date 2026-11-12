@@ -13,7 +13,8 @@ import type {
   MonthCounter,
   Period,
 } from '@ghost-hours/core';
-import { buildAnnex, buildInvoiceDraft, roundCents } from '@ghost-hours/billing';
+import { buildAnnex, buildInvoiceDraft, detectOverloadedDays, roundCents } from '@ghost-hours/billing';
+import type { OverloadWarning } from '@ghost-hours/billing';
 import type { AppState } from './types.ts';
 
 /**
@@ -216,4 +217,18 @@ function emptyClient(clientId: string): Client {
     projects: [],
     rules: [],
   };
+}
+
+/**
+ * Days that carry more counted time than one working day, every client
+ * together (`detectOverloadedDays`, D.6). The daily cap already keeps one
+ * client from being billed twice for the same day; this is the other risk —
+ * the same hours claimed by two clients, or a machine that never stopped.
+ * Counted means neither `conflict` nor `rejected`: what a reviewer would bill.
+ */
+export function overloadedDays(state: AppState): readonly OverloadWarning[] {
+  const counted = state.blocks.filter(
+    (block) => block.status !== 'conflict' && block.status !== 'rejected',
+  );
+  return detectOverloadedDays(counted, state.settings);
 }

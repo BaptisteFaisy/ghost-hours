@@ -1,0 +1,47 @@
+/**
+ * Styles of the two surfaces that report a problem: the storage warning of the
+ * shell and the over-booked days panel of the contradictions screen.
+ *
+ * They live apart from `theme.css` on purpose. That file is 702 lines, above
+ * the 500-line budget the project applies to every source file, so it owes a
+ * split (tokens / components / print) — and growing it further would make the
+ * split harder, not easier. Colours come from the theme's own variables, so a
+ * dark or print theme keeps working: nothing is hardcoded here.
+ */
+
+.storage-warning {
+  margin: var(--gap) 0;
+  padding: 10px 12px;
+  border: 1px solid var(--conflict-border);
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: var(--conflict-fill);
+  color: var(--conflict-ink);
+  font-size: 0.95rem;
+}
+
+.storage-warning strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.storage-warning .numeric {
+  color: inherit;
+  opacity: 0.85;
+  word-break: break-word;
+}
+
+.overload-panel {
+  margin-top: var(--gap);
+  padding-top: var(--gap);
+  border-top: 1px solid var(--line);
+}
+
+.overload-panel ul {
+  margin: 6px 0 0;
+  padding-left: 1.2em;
+}
+
+.overload-panel li {
+  color: var(--conflict-ink);
+}
