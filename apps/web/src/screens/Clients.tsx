@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import type { BillingMode, Client, Evidence, MappingRule, RoundingMode, RoundingScope } from '@ghost-hours/core';
+import type { BillingMode, Client, Evidence, MappingRule, RoundingMode, RoundingRule, RoundingScope } from '@ghost-hours/core';
+import { ROUNDING_MODES, ROUNDING_SCOPES } from '@ghost-hours/billing';
 import { makeClient, suggestCandidates, suggestRule } from '@ghost-hours/mapping';
 import type { SuggestedCandidate } from '@ghost-hours/mapping';
 import { useApp, useDispatch } from '../state/store.tsx';
@@ -25,6 +26,7 @@ const MODE_KEYS: Readonly<Record<BillingMode, MessageKey>> = {
   'daily-thresholds': 'clients.modeDailyThresholds',
   'daily-proportional': 'clients.modeDailyProportional',
 };
+const BILLING_MODES: readonly BillingMode[] = ['hourly', 'daily-thresholds', 'daily-proportional'];
 const ROUNDING_KEYS: Readonly<Record<RoundingMode, MessageKey>> = {
   none: 'clients.roundingNone',
   nearest: 'clients.roundingNearest',
@@ -70,6 +72,7 @@ export function Clients(): JSX.Element {
             key={client.id}
             client={client}
             onRemoveRule={(ruleId) => dispatch({ type: 'removeRule', ruleId })}
+            onChange={(updated) => dispatch({ type: 'upsertClient', client: updated })}
           />
         ))}
       </ul>
@@ -87,6 +90,7 @@ export function Clients(): JSX.Element {
 function ClientCard(props: {
   readonly client: Client;
   readonly onRemoveRule: (ruleId: string) => void;
+  readonly onChange: (client: Client) => void;
 }): JSX.Element {
   const { t, formatMoney } = useI18n();
   const text = useText(EXTRA);
@@ -100,14 +104,40 @@ function ClientCard(props: {
         <Term label={t('clients.rate')} value={formatMoney(client.rateCents, client.currency)} numeric />
         <Term label={t('clients.dayRate')} value={formatMoney(client.dayRateCents, client.currency)} numeric />
         <Term label={t('clients.currency')} value={client.currency} />
-        <Term
-          label={t('clients.rounding')}
-          value={`${t(ROUNDING_KEYS[client.rounding.mode])} · ${t(SCOPE_KEYS[client.rounding.scope])}`}
-        />
         <Term label={text('clients.projects')} value={projects.length === 0 ? t('common.none') : projects} />
       </dl>
+      <RoundingEditor client={client} onChange={props.onChange} />
       <RuleList rules={client.rules} onRemove={props.onRemoveRule} />
     </li>
+  );
+}
+
+/**
+ * The rounding rule of a client, editable (HEU-F-23). Both selects dispatch
+ * the client with its updated rule; the store's reconstruction is what makes
+ * the invoice draft follow — nothing is recomputed here.
+ */
+function RoundingEditor(props: {
+  readonly client: Client;
+  readonly onChange: (client: Client) => void;
+}): JSX.Element {
+  const { t } = useI18n();
+  const { client } = props;
+  const patch = (change: Partial<RoundingRule>): void =>
+    props.onChange({ ...client, rounding: { ...client.rounding, ...change } });
+  return (
+    <div className="client-rounding">
+      <SelectField
+        id={`rounding-mode-${client.id}`} label={t('clients.rounding')} value={client.rounding.mode}
+        onChange={(value) => patch({ mode: value as RoundingMode })}
+        options={ROUNDING_MODES.map((mode) => ({ value: mode, label: t(ROUNDING_KEYS[mode]) }))}
+      />
+      <SelectField
+        id={`rounding-scope-${client.id}`} label={t('clients.roundingScope')} value={client.rounding.scope}
+        onChange={(value) => patch({ scope: value as RoundingScope })}
+        options={ROUNDING_SCOPES.map((scope) => ({ value: scope, label: t(SCOPE_KEYS[scope]) }))}
+      />
+    </div>
   );
 }
 
@@ -330,11 +360,7 @@ function IdentityFields(props: FieldHandlers): JSX.Element {
         label={t('clients.mode')}
         value={form.mode}
         onChange={(value) => patch({ mode: value as BillingMode })}
-        options={[
-          { value: 'hourly', label: t('clients.modeHourly') },
-          { value: 'daily-thresholds', label: t('clients.modeDailyThresholds') },
-          { value: 'daily-proportional', label: t('clients.modeDailyProportional') },
-        ]}
+        options={BILLING_MODES.map((mode) => ({ value: mode, label: t(MODE_KEYS[mode]) }))}
       />
     </>
   );
