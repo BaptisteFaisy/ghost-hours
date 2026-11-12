@@ -1,4 +1,5 @@
-import type { Block, InvoiceDraft } from '@ghost-hours/core';
+import type { Block, Evidence, InvoiceDraft } from '@ghost-hours/core';
+import { signedShare } from '@ghost-hours/core';
 import { billableBlocks, clipToPeriod } from '@ghost-hours/billing';
 import { useApp } from '../state/store.tsx';
 import { defensibilityScore, objectionsTo } from '../state/objections.ts';
@@ -61,6 +62,12 @@ export function Objections(props: ObjectionsProps): JSX.Element {
   const blocks = billableClientBlocks(state, draft);
   const objections = [...objectionsTo(state, draft, blocks)].sort(bySeverity);
   const score = defensibilityScore(state, draft, blocks, objections);
+  const proofs = blocks.flatMap((block) =>
+    block.evidenceIds
+      .map((id) => state.evidence.find((item) => item.id === id))
+      .filter((item): item is Evidence => item !== undefined),
+  );
+  const signed = Math.round(signedShare(proofs) * 100);
 
   return (
     <section className="card" aria-label={t('invoice.objections')}>
@@ -78,6 +85,9 @@ export function Objections(props: ObjectionsProps): JSX.Element {
         {t('invoice.defensibility')}: <span className="numeric">{score} / 100</span>
       </p>
       <p>{t('invoice.defensibilityHint')}</p>
+      <p>
+        {t('invoice.signedShare')}: <span className="numeric">{signed} %</span>
+      </p>
     </section>
   );
 }
