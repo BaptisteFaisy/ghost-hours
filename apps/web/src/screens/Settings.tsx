@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useI18n } from '../i18n/index.ts';
 import { useApp, useDispatch, eraseEverything } from '../state/store.tsx';
 import { ImportPanel } from '../components/ImportPanel.tsx';
@@ -14,7 +15,6 @@ import type { ReconstructionSettings } from '@ghost-hours/core';
 export function Settings(): JSX.Element {
   const { t } = useI18n();
   const state = useApp();
-  const dispatch = useDispatch();
 
   return (
     <section className="card" aria-label={t('settings.title')}>
@@ -27,22 +27,49 @@ export function Settings(): JSX.Element {
       <ImportPanel />
       <AuditLog />
       <StorageNotice />
-      <section aria-label={t('settings.data')}>
-        <h3>{t('settings.data')}</h3>
-        <button type="button" onClick={() => dispatch({ type: 'loadSampleMonth' })}>
-          {t('settings.loadSample')}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            void eraseEverything();
-            dispatch({ type: 'resetAll' });
-          }}
-        >
+      <DataSection />
+      <p>{`${t('settings.timeZone')}: ${state.settings.timeZone}`}</p>
+    </section>
+  );
+}
+
+/**
+ * The data gestures: load the sample month, erase everything. Erasing is the
+ * one irreversible act of the app, so it asks twice — the first click states
+ * what will be lost, the second does it, and `common.cancel` steps back.
+ */
+function DataSection(): JSX.Element {
+  const { t } = useI18n();
+  const dispatch = useDispatch();
+  const [confirming, setConfirming] = useState(false);
+  return (
+    <section aria-label={t('settings.data')}>
+      <h3>{t('settings.data')}</h3>
+      <button type="button" onClick={() => dispatch({ type: 'loadSampleMonth' })}>
+        {t('settings.loadSample')}
+      </button>{' '}
+      {confirming ? (
+        <span aria-live="polite">
+          <span>{t('settings.eraseConfirm')}</span>{' '}
+          <button
+            type="button"
+            onClick={() => {
+              void eraseEverything();
+              dispatch({ type: 'resetAll' });
+              setConfirming(false);
+            }}
+          >
+            {t('common.yes')}
+          </button>{' '}
+          <button type="button" onClick={() => setConfirming(false)}>
+            {t('common.cancel')}
+          </button>
+        </span>
+      ) : (
+        <button type="button" onClick={() => setConfirming(true)}>
           {t('settings.eraseData')}
         </button>
-      </section>
-      <p>{`${t('settings.timeZone')}: ${state.settings.timeZone}`}</p>
+      )}
     </section>
   );
 }
@@ -164,6 +191,7 @@ function LanguageField(): JSX.Element {
       <label htmlFor="locale-select">{t('nav.language')}</label>
       <select
         id="locale-select"
+        aria-label={t('a11y.languageSwitch')}
         value={locale}
         onChange={(event) => setLocale(event.target.value === 'fr' ? 'fr' : 'en')}
       >
@@ -217,6 +245,15 @@ function ReconstructionFields(): JSX.Element {
           }
         />
       ))}
+      <label htmlFor="workday-start-input">{t('settings.workdayStart')}</label>
+      <input
+        id="workday-start-input"
+        type="time"
+        value={state.settings.workdayStart}
+        onChange={(event) =>
+          dispatch({ type: 'setSettings', patch: { workdayStart: event.target.value } })
+        }
+      />
       <label htmlFor="timezone-input">{t('settings.timeZone')}</label>
       <input
         id="timezone-input"

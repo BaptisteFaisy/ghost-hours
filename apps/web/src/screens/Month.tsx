@@ -23,16 +23,21 @@ export function Month(): JSX.Element {
   const dispatch = useDispatch();
   const { t } = useI18n();
   const timeZone = state.settings.timeZone;
+  // `null` reads "every client". The filter narrows the breakdowns below; the
+  // counter stays global on purpose — it is the headline of the month, and a
+  // headline that quietly changes meaning when a filter moves is a trap.
+  const [clientFilter, setClientFilter] = useState<string | null>(null);
 
   const rows = monthCounter(state);
   const perClient = rows.filter(
     (row) => row.clientId !== null && clientById(state, row.clientId) !== null,
   );
+  const shown = clientFilter === null ? perClient : perClient.filter((row) => row.clientId === clientFilter);
   const all = rows.find((row) => row.clientId === null) ?? null;
 
   const dayLoad = useMemo(
-    () => loadPerDay(state.blocks, state.activeMonth.year, state.activeMonth.month, timeZone),
-    [state.blocks, state.activeMonth, timeZone],
+    () => loadPerDay(state.blocks, state.activeMonth.year, state.activeMonth.month, timeZone, clientFilter),
+    [state.blocks, state.activeMonth, timeZone, clientFilter],
   );
 
   const found = all?.foundMinutes ?? sum(perClient.map((row) => row.foundMinutes));
@@ -44,6 +49,7 @@ export function Month(): JSX.Element {
   return (
     <section className="card month-screen" aria-label={t('month.title')}>
       <h2>{t('month.title')}</h2>
+      <MonthNav />
       <Counter
         found={found}
         confirmed={confirmed}
@@ -53,15 +59,115 @@ export function Month(): JSX.Element {
       />
       <GapExplainer />
       <ConfirmSolid />
+      <ClientFilter value={clientFilter} onChange={setClientFilter} />
       <h3>{t('month.perDay')}</h3>
       <DayLoadBars dayLoad={dayLoad} />
       <h3>{t('month.perClient')}</h3>
       <ClientBreakdown
-        rows={perClient}
+        rows={shown}
         declared={state.declaredMinutes}
         onDeclare={(clientId, minutes) => dispatch({ type: 'setDeclared', clientId, minutes })}
       />
     </section>
+  );
+}
+
+/** Two digits, as `input[type=month]` wants them ("2026-11", not "2026-1"). */
+function monthValue(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+/**
+ * Which month is under review is a choice, not a given: the previous and next
+ * month, the current one, and a picker. Everything dispatches `setActiveMonth`,
+ * so the counter, the load per day, the week and the invoice follow.
+ */
+function MonthNav(): JSX.Element {
+  const { t } = useI18n();
+  const state = useApp();
+  const dispatch = useDispatch();
+  const { year, month } = state.activeMonth;
+  const shift = (delta: number): void => {
+    const moved = new Date(Date.UTC(year, month - 1 + delta, 1));
+    dispatch({
+      type: 'setActiveMonth',
+      year: moved.getUTCFullYear(),
+      month: moved.getUTCMonth() + 1,
+    });
+  };
+  return (
+    <nav className="month-nav" aria-label={t('month.selectMonth')}>
+      <button type="button" onClick={() => shift(-1)}>
+        {t('common.previous')}
+      </button>{' '}
+      <label htmlFor="month-picker">{t('month.selectMonth')}</label>{' '}
+      <input
+        id="month-picker"
+        type="month"
+        value={monthValue(year, month)}
+        onChange={(event) => {
+          const [picked, pickedMonth] = event.target.value.split('-');
+          if (picked === undefined || pickedMonth === undefined) return;
+          dispatch({
+            type: 'setActiveMonth',
+            year: Number(picked),
+            month: Number(pickedMonth),
+          });
+        }}
+      />{' '}
+      <button type="button" onClick={() => shift(1)}>
+        {t('common.next')}
+      </button>{' '}
+      <TodayButton />
+    </nav>
+  );
+}
+
+/** Back to the month the reader is living in, in the zone the data is read in. */
+function TodayButton(): JSX.Element {
+  const { t } = useI18n();
+  const state = useApp();
+  const dispatch = useDispatch();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        const key = dayKeyInZone(Date.now(), state.settings.timeZone);
+        dispatch({
+          type: 'setActiveMonth',
+          year: Number(key.slice(0, 4)),
+          month: Number(key.slice(5, 7)),
+        });
+      }}
+    >
+      {t('common.today')}
+    </button>
+  );
+}
+
+/** Narrows the two breakdowns below to one client, or to all of them. */
+function ClientFilter(props: {
+  value: string | null;
+  onChange: (value: string | null) => void;
+}): JSX.Element {
+  const { t } = useI18n();
+  const state = useApp();
+  return (
+    <label className="month-client-filter" htmlFor="month-client-filter">
+      {t('common.client')}{' '}
+      <select
+        id="month-client-filter"
+        value={props.value ?? ''}
+        onChange={(event) => props.onChange(event.target.value === '' ? null : event.target.value)}
+      >
+        <option value="">{t('month.allClients')}</option>
+        {state.clients.map((client) => (
+          <option key={client.id} value={client.id}>
+            {client.name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -179,11 +285,13 @@ function loadPerDay(
   year: number,
   month: number,
   timeZone: string,
+  clientId: string | null,
 ): readonly DayLoadEntry[] {
   const range = monthRangeInZone(year, month, timeZone);
   const byDay = new Map<string, Minutes>();
   for (const block of blocks) {
     if (block.start < range.start || block.start >= range.end) continue;
+    if (clientId !== null && block.clientId !== clientId) continue;
     const key = dayKeyInZone(block.start, timeZone);
     const minutes = Math.max(0, Math.round((block.end - block.start) / 60_000));
     byDay.set(key, (byDay.get(key) ?? 0) + minutes);
