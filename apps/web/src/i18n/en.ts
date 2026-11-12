@@ -103,6 +103,20 @@ export const en = {
   'evidence.stitch': 'Stitch',
   'evidence.orphans': 'Unassigned evidence',
   'evidence.orphanHint': 'No rule matches this evidence yet.',
+  // --- the credibility of the proofs: signature, committer, clocks ---
+  'evidence.signature': 'Signature',
+  'evidence.signatureGood': 'Signed and trusted',
+  'evidence.signatureNone': 'Not signed',
+  'evidence.signatureBad': 'The signature does not verify',
+  'evidence.signatureUnknown': 'Key unknown, expired or revoked',
+  'evidence.signer': 'Signed by {signer}',
+  'evidence.credibility': 'Verifiability',
+  'evidence.signedShare': '{share} of the commits are signed, {flagged} proof(s) to check',
+  'signal.unsigned': 'No cryptographic signature: anyone could have written this commit.',
+  'signal.committer-differs': 'Someone else committed it: the author is not the committer.',
+  'signal.committed-before-authored': 'Committed before it was written: a clock was moved.',
+  'signal.signature-invalid': 'The signature does not verify.',
+  'signal.signature-unverified': 'The signer’s key is unknown, expired or revoked.',
 
   'clients.title': 'Clients and rules',
   'clients.add': 'Add a client',
@@ -191,6 +205,8 @@ export const en = {
   'settings.halfDayFrom': 'Half day from (minutes)',
   'settings.data': 'Data',
   'settings.loadSample': 'Load the sample month',
+  'settings.anchorHint':
+    'Freeze today’s proofs: run `node scripts/anchor-evidence.mjs add evidence.json anchors.jsonl`, then publish that file where your client cannot edit it.',
   'settings.exportData': 'Export the data (JSON)',
   'settings.eraseData': 'Erase all data',
   'settings.eraseConfirm': 'Erase every piece of data stored in this browser?',
@@ -229,6 +245,9 @@ export const en = {
   'invoice.nextPeriod': 'Next month',
   'invoice.noClient': 'No client yet — create one on the Clients screen.',
   'invoice.printHint': 'The print dialog is the PDF: nothing is uploaded anywhere.',
+  'invoice.signedShare': 'Proofs behind this draft that carry a signature',
+  'evidence.assumedDominant':
+    'The assumed start outweighs the proof here: this block rests mostly on the courtesy granted before a commit. Worth a second look.',
   'invoice.markInvoicedExplain':
     'Confirmed blocks of this period will be locked: a later reconstruction leaves them untouched.',
   'invoice.exportHint': 'Exports are built in this tab and downloaded by the browser.',

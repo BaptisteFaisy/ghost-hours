@@ -64,6 +64,20 @@ export interface Evidence {
   readonly added?: number;
   readonly deleted?: number;
   readonly authorEmail?: string;
+  /**
+   * The raw Git signature status letter (`%G?`): `G` signed and trusted,
+   * `B`/`U` bad or untrusted, `X`/`Y`/`R`/`E` unknown / expired / revoked key,
+   * `N` no signature. Absent when the reader did not ask for it. The letters
+   * are Git's own, so nothing here is an interpretation.
+   */
+  readonly signature?: string;
+  /** Signer name and key fingerprint (`%GS`, `%GK`). */
+  readonly signer?: string;
+  readonly keyFingerprint?: string;
+  /** The committer, not the author (`%ce`): a rebase keeps the author and changes the committer. */
+  readonly committerEmail?: string;
+  /** The commit instant (`%cI`), which a rebase rewrites; `at` keeps the author instant. */
+  readonly committedAt?: Instant;
   /** Reflog `checkout` target branch. */
   readonly to?: string;
   readonly from?: string;

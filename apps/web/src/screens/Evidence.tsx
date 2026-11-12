@@ -1,5 +1,12 @@
-import type { Block, Evidence, EvidenceKind, Instant } from '@ghost-hours/core';
-import { formatPercent, monthRangeInZone } from '@ghost-hours/core';
+import type { Block, CredibilitySignal, Evidence, EvidenceKind, Instant } from '@ghost-hours/core';
+import {
+  credibilitySignals,
+  formatPercent,
+  isAssumptionDominant,
+  isClean,
+  monthRangeInZone,
+  signedShare,
+} from '@ghost-hours/core';
 import { sortEvidence } from '@ghost-hours/mapping';
 import { useApp, useDispatch } from '../state/store.tsx';
 import { blockById, clientById, evidenceOfBlock } from '../state/selectors.ts';
@@ -27,17 +34,50 @@ const KIND_KEYS: Readonly<Record<EvidenceKind, MessageKey>> = {
 };
 
 /** The fields a proof can carry, each with the key that names it (D.4). */
-type ProofField = 'repo' | 'branch' | 'author' | 'added' | 'deleted' | 'file' | 'line';
+type ProofField = 'repo' | 'branch' | 'author' | 'signature' | 'added' | 'deleted' | 'file' | 'line';
 
 const FIELD_KEYS: Readonly<Record<ProofField, MessageKey>> = {
   repo: 'evidence.repo',
   branch: 'evidence.branch',
   author: 'evidence.author',
+  signature: 'evidence.signature',
   added: 'evidence.added',
   deleted: 'evidence.deleted',
   file: 'evidence.file',
   line: 'evidence.line',
 };
+
+/** Each signal of the core, and the key that says what it means for the trust. */
+const SIGNAL_KEYS: Readonly<Record<CredibilitySignal, MessageKey>> = {
+  unsigned: 'signal.unsigned',
+  'signature-invalid': 'signal.signature-invalid',
+  'signature-unverified': 'signal.signature-unverified',
+  'committer-differs': 'signal.committer-differs',
+  'committed-before-authored': 'signal.committed-before-authored',
+};
+
+/** How the signature of a commit reads, once the signals have been computed. */
+type SignatureStatus = 'good' | 'none' | 'bad' | 'unknown';
+
+const SIGNATURE_KEYS: Readonly<Record<SignatureStatus, MessageKey>> = {
+  good: 'evidence.signatureGood',
+  none: 'evidence.signatureNone',
+  bad: 'evidence.signatureBad',
+  unknown: 'evidence.signatureUnknown',
+};
+
+/**
+ * The signature status of a commit, read from the signals of the core: an
+ * invalid signature, an unverifiable key, no signature at all — otherwise the
+ * signature is good. The letters are Git's own (`%G?`), nothing is guessed.
+ */
+function signatureStatus(proof: Evidence): SignatureStatus {
+  const signals = credibilitySignals(proof);
+  if (signals.includes('signature-invalid')) return 'bad';
+  if (signals.includes('signature-unverified')) return 'unknown';
+  if (signals.includes('unsigned')) return 'none';
+  return proof.signature === 'G' ? 'good' : 'unknown';
+}
 
 export function Evidence(): JSX.Element {
   const state = useApp();
@@ -119,30 +159,19 @@ interface BlockPanelProps {
 
 /** The panel of one block: span, shares, stitch, proofs, and the way back. */
 function BlockPanel(props: BlockPanelProps): JSX.Element {
-  const { t, locale, formatDate, formatTime, formatDuration } = useI18n();
+  const { t, locale, formatDuration } = useI18n();
   const { block, proofs } = props;
   const proven = formatPercent(Math.round(block.provenShare * 10_000), locale);
 
   return (
     <div className="evidence-panel">
-      <header className="evidence-header">
-        <h3>{props.clientName}</h3>
-        <p className="evidence-when">
-          {formatDate(block.start)} {formatTime(block.start)} — {formatTime(block.end)}
-        </p>
-        <p className="evidence-status">
-          {t(STATUS_KEYS[block.status])} ·{' '}
-          <span
-            className="evidence-confidence"
-            aria-label={t('a11y.confidence', {
-              confidence: t(CONFIDENCE_KEYS[block.confidence]),
-            })}
-          >
-            {t(CONFIDENCE_KEYS[block.confidence])}
-          </span>
-        </p>
-      </header>
+      <BlockHeader block={block} proofs={proofs} clientName={props.clientName} />
 
+      {isAssumptionDominant(block) && (
+        <p className="evidence-assumed-warning" role="note">
+          {t('evidence.assumedDominant')}
+        </p>
+      )}
       <dl className="counter" aria-label={t('a11y.provenShare', { share: proven })}>
         <div className="counter-item">
           <dt>{t('week.proven')}</dt>
@@ -162,6 +191,60 @@ function BlockPanel(props: BlockPanelProps): JSX.Element {
         {t('common.back')}
       </button>
     </div>
+  );
+}
+
+interface BlockHeaderProps {
+  readonly block: Block;
+  readonly proofs: readonly Evidence[];
+  readonly clientName: string;
+}
+
+/** The head of the panel: who, when, how confident — and how verifiable. */
+function BlockHeader(props: BlockHeaderProps): JSX.Element {
+  const { t, formatDate, formatTime } = useI18n();
+  const { block } = props;
+  return (
+    <header className="evidence-header">
+      <h3>{props.clientName}</h3>
+      <p className="evidence-when">
+        {formatDate(block.start)} {formatTime(block.start)} — {formatTime(block.end)}
+      </p>
+      <p className="evidence-status">
+        {t(STATUS_KEYS[block.status])} ·{' '}
+        <span
+          className="evidence-confidence"
+          aria-label={t('a11y.confidence', {
+            confidence: t(CONFIDENCE_KEYS[block.confidence]),
+          })}
+        >
+          {t(CONFIDENCE_KEYS[block.confidence])}
+        </span>
+      </p>
+      <BlockCredibility proofs={props.proofs} />
+    </header>
+  );
+}
+
+/**
+ * The verifiability of the block: the share of its commits that carry a
+ * trusted signature, and the proofs that deserve a second look. A block
+ * without a commit (a meeting, a note, a manual entry) says nothing about
+ * signatures, so it stays silent.
+ */
+function BlockCredibility(props: { readonly proofs: readonly Evidence[] }): JSX.Element | null {
+  const { t } = useI18n();
+  const commits = props.proofs.filter((proof) => proof.kind === 'commit');
+  if (commits.length === 0) return null;
+  const share = `${Math.round(signedShare(props.proofs) * 100)}%`;
+  const flagged = props.proofs.filter((proof) => !isClean(proof)).length;
+  return (
+    <p className="evidence-credibility">
+      <span className="evidence-label">{t('evidence.credibility')}</span>
+      <span className="evidence-value">
+        {t('evidence.signedShare', { share, flagged })}
+      </span>
+    </p>
   );
 }
 
@@ -210,7 +293,30 @@ function ProofItem(props: { readonly proof: Evidence }): JSX.Element {
       <span className="evidence-when">{instantLabel(instant, formatDate, formatTime)}</span>
       <span className="evidence-what">{proof.summary ?? proof.title ?? proof.text ?? ''}</span>
       <ProofFields proof={proof} />
+      <ProofSignals proof={proof} />
     </li>
+  );
+}
+
+/**
+ * The credibility signals of a proof, as chips under the proof.
+ *
+ * The core computes the signals; the screen only says what each one means
+ * for the trust. A proof without a signal shows nothing: silence is the
+ * normal case, and a chip would be noise.
+ */
+function ProofSignals(props: { readonly proof: Evidence }): JSX.Element | null {
+  const { t } = useI18n();
+  const signals = credibilitySignals(props.proof);
+  if (signals.length === 0) return null;
+  return (
+    <ul className="evidence-signals">
+      {signals.map((signal) => (
+        <li key={signal} className="evidence-signal" data-signal={signal}>
+          {t(SIGNAL_KEYS[signal])}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -233,6 +339,7 @@ function ProofFields(props: { readonly proof: Evidence }): JSX.Element {
         <span key={row.key} className="evidence-field">
           <span className="evidence-label">{row.label}</span>
           <span className="evidence-value">{row.value}</span>
+          {row.note !== undefined ? <span className="evidence-note">{row.note}</span> : null}
         </span>
       ))}
       {props.proof.attendees !== undefined && props.proof.attendees.length > 0 ? (
@@ -251,22 +358,32 @@ interface ProofRow {
   readonly key: string;
   readonly label: string;
   readonly value: string | number;
+  /** A second line under the value: who signed the commit. */
+  readonly note?: string;
 }
 
 /** One row per field the proof carries; nothing is invented. */
 function proofRows(
   proof: Evidence,
-  translate: (key: MessageKey) => string,
+  translate: (key: MessageKey, values?: Readonly<Record<string, string | number>>) => string,
 ): readonly ProofRow[] {
-  const row = (field: ProofField, value: string | number): ProofRow => ({
+  const row = (field: ProofField, value: string | number, note?: string): ProofRow => ({
     key: field,
     label: translate(FIELD_KEYS[field]),
     value,
+    note,
   });
   const rows: ProofRow[] = [];
   if (proof.repo !== undefined) rows.push(row('repo', proof.repo));
   if (proof.branch !== undefined) rows.push(row('branch', proof.branch));
   if (proof.authorEmail !== undefined) rows.push(row('author', proof.authorEmail));
+  if (proof.kind === 'commit') {
+    const signer =
+      proof.signer === undefined
+        ? undefined
+        : translate('evidence.signer', { signer: proof.signer });
+    rows.push(row('signature', translate(SIGNATURE_KEYS[signatureStatus(proof)]), signer));
+  }
   if (proof.added !== undefined) rows.push(row('added', proof.added));
   if (proof.deleted !== undefined) rows.push(row('deleted', proof.deleted));
   if (proof.file !== undefined) rows.push(row('file', proof.file));

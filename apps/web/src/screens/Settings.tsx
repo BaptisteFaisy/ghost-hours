@@ -49,6 +49,7 @@ function DataSection(): JSX.Element {
       <button type="button" onClick={() => dispatch({ type: 'loadSampleMonth' })}>
         {t('settings.loadSample')}
       </button>{' '}
+      <p>{t('settings.anchorHint')}</p>
       <LoadRealMonthButton />{' '}
       {confirming ? (
         <span aria-live="polite">
