@@ -14,6 +14,7 @@ import type { ReconstructionOutcome } from './reconstruct.ts';
 import type { AuditEntry } from './audit.ts';
 import type { NoteFile } from '@ghost-hours/notes';
 import type { Dataset } from '@ghost-hours/core';
+import type { RealMonth } from '@ghost-hours/fixture-real-month';
 
 /**
  * The application state (contract 3).
@@ -43,9 +44,19 @@ export interface StorageWarning {
   readonly reason: string;
 }
 
+/**
+ * Where the data on screen comes from: the fictitious demo month, the real
+ * anonymized month of October 2026, or a dataset restored/imported by the
+ * reader. `null` until something is loaded. The shell shows the provenance so
+ * a demo is never mistaken for the reader's own work.
+ */
+export type DatasetKind = 'sample' | 'real' | 'imported';
+
 export interface AppState {
   readonly status: 'empty' | 'ready';
   readonly locale: SupportedLocale;
+  /** Where the loaded data comes from, so the shell can show its provenance. */
+  readonly datasetKind: DatasetKind | null;
   readonly settings: ReconstructionSettings;
   readonly clients: readonly Client[];
   /** Mapped and orphan evidence alike. */
@@ -85,6 +96,7 @@ export interface AppState {
 
 export type AppAction =
   | { type: 'loadSampleMonth' }
+  | { type: 'importRealMonth'; month: RealMonth }
   | { type: 'importEvidence'; evidence: readonly Evidence[] }
   | { type: 'importCalendar'; ics: string }
   | { type: 'importNotes'; notes: readonly NoteFile[] }
@@ -132,6 +144,7 @@ export function initialState(settings: ReconstructionSettings): AppState {
   return {
     status: 'empty',
     locale: 'en',
+    datasetKind: null,
     settings,
     clients: [],
     evidence: [],

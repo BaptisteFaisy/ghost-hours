@@ -1,5 +1,5 @@
 import { monthOfInZone } from '@ghost-hours/core';
-import type { Client, Dataset, Evidence } from '@ghost-hours/core';
+import type { Client, Dataset, Evidence, ReconstructionSettings } from '@ghost-hours/core';
 import { parseNotes } from '@ghost-hours/notes';
 import { loadSampleMonth } from '@ghost-hours/fixture-sample-month';
 import { mergeEvidence, reconstruct } from './reconstruct.ts';
@@ -20,25 +20,44 @@ export function upsertClient(client: Client, clients: readonly Client[]): readon
 }
 
 export function loadSample(state: AppState): AppState {
-  const sample = loadSampleMonth();
-  const calendar = parseCalendarEvidence(sample.calendarIcs, state.settings.timeZone);
-  const notes = parseNoteEvidence(sample.notes, state.settings.timeZone);
-  const evidence = mergeEvidence(mergeEvidence(sample.evidence, calendar), notes);
-  const outcome = reconstruct(evidence, sample.clients, sample.settings, [], []);
+  return loadFixture(state, loadSampleMonth(), 'sample');
+}
+
+/**
+ * Both fixture months share one shape, so they share one loader. The type is
+ * structural on purpose: neither fixture package is imported here, and the
+ * `label` keeps the two apart in the import report and in `datasetKind`.
+ */
+export interface FixtureMonth {
+  readonly evidence: readonly Evidence[];
+  readonly calendarIcs: string;
+  readonly notes: readonly { path: string; content: string }[];
+  readonly clients: readonly Client[];
+  readonly settings: ReconstructionSettings;
+  readonly declaredMinutes: Readonly<Record<string, number>>;
+}
+
+/** Load a fixture month (fictitious or real) and reconstruct it from scratch. */
+export function loadFixture(state: AppState, fixture: FixtureMonth, label: 'sample' | 'real'): AppState {
+  const calendar = parseCalendarEvidence(fixture.calendarIcs, state.settings.timeZone);
+  const notes = parseNoteEvidence(fixture.notes, state.settings.timeZone);
+  const evidence = mergeEvidence(mergeEvidence(fixture.evidence, calendar), notes);
+  const outcome = reconstruct(evidence, fixture.clients, fixture.settings, [], []);
   return {
     ...state,
     status: 'ready',
-    settings: sample.settings,
-    clients: sample.clients,
+    datasetKind: label,
+    settings: fixture.settings,
+    clients: fixture.clients,
     evidence: outcome.evidence,
     blocks: outcome.blocks,
     conflicts: outcome.conflicts,
     calibration: outcome.calibration,
     ignoredEvidence: outcome.ignored,
     orphanEvidence: outcome.orphans,
-    declaredMinutes: { ...sample.declaredMinutes },
+    declaredMinutes: { ...fixture.declaredMinutes },
     activeMonth: monthOfEvidence(evidence, state.settings.timeZone),
-    importReport: [`sample: ${evidence.length} proofs`, `sample: ${outcome.blocks.length} blocks`],
+    importReport: [`${label}: ${evidence.length} proofs`, `${label}: ${outcome.blocks.length} blocks`],
   };
 }
 
@@ -92,6 +111,7 @@ export function importDataset(state: AppState, dataset: Dataset): AppState {
   return {
     ...state,
     status: 'ready',
+    datasetKind: 'imported',
     locale: dataset.locale,
     settings: dataset.settings,
     clients: dataset.clients,

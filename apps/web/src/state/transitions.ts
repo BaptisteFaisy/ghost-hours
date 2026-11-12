@@ -16,6 +16,7 @@ import {
   importCalendar,
   importDataset,
   importNotes,
+  loadFixture,
   loadSample,
   upsertClient,
 } from './importTransitions.ts';
@@ -51,6 +52,7 @@ export function reduce(state: AppState, action: AppAction): AppState {
 function applyAction(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'loadSampleMonth': return loadSample(state);
+    case 'importRealMonth': return loadFixture(state, action.month, 'real');
     case 'importEvidence': return withReconstruction(state, { evidence: mergeEvidence(state.evidence, action.evidence) });
     case 'importCalendar': return importCalendar(state, action.ics);
     case 'importNotes': return importNotes(state, action.notes);

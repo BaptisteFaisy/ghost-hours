@@ -81,6 +81,7 @@ export function auditToJson(entries: readonly AuditEntry[]): string {
 /** Which actions are decisions worth a trace (view changes are not). */
 export const AUDITED_ACTIONS: ReadonlySet<string> = new Set([
   'loadSampleMonth',
+  'importRealMonth',
   'importEvidence',
   'importCalendar',
   'importNotes',
