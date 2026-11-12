@@ -290,6 +290,8 @@ export const fr: Dictionary = {
   'reason.boundedBy.previous-proof': 'Raccourcie par la preuve précédente d’un autre client.',
   'reason.boundedBy.workday-start': 'Raccourcie par le début de la journée de travail.',
   'reason.boundedBy.none': 'Rien ne l’a raccourcie.',
+  'reason.boundedBy.day-cap':
+    'Raccourcie par la journée : l’amorce supposée est accordée une fois par jour — une journée saturée de commits ne peut pas ajouter de minutes inventées.',
   'reason.resume': 'Reprend après une pause de {minutes} min : rien n’est supposé avant.',
   'reason.meeting': 'Bornes exactes de l’événement d’agenda.',
   'reason.manual': 'Déclaré par vous, non prouvé.',
