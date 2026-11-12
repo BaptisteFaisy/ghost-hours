@@ -1,7 +1,7 @@
 name: Site up (veille hebdomadaire)
 
 # Veilleur sur l'hébergement : le règlement du concours exige que l'URL
-# publique https://baptistefaisy.github.io/ghost-hours/ reste vivante et
+# publique https://tradoooo.github.io/ghost-hours/ reste vivante et
 # gratuite jusqu'au 29/01/2027. Ce workflow la vérifie chaque semaine et à la
 # demande : HTTP 200, marque « Ghost Hours » dans le HTML, et un asset réel du
 # bundle qui répond. Toute anomalie met le job en échec (workflow rouge dans
@@ -31,12 +31,12 @@ jobs:
     name: site-up
     # Runner self-hosted (comme deploy.yml et e2e.yml) : e2e.yml charge déjà
     # l'URL publique depuis ce runner après chaque déploiement, donc son accès
-    # Internet vers baptistefaisy.github.io est prouvé ; on suit ce choix.
+    # Internet vers tradoooo.github.io est prouvé ; on suit ce choix.
     # Aucun toolchain du dépôt nécessaire : shell + curl suffisent.
     runs-on: [self-hosted, linux, x64, ghost-hours-worker]
     timeout-minutes: 5
     env:
-      SITE_URL: https://baptistefaisy.github.io/ghost-hours/
+      SITE_URL: https://tradoooo.github.io/ghost-hours/
     steps:
       - uses: actions/checkout@v4
         with:

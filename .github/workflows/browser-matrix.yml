@@ -18,7 +18,7 @@ on:
         type: string
       url:
         description: "URL à tester (vide = aperçu local de la branche)"
-        default: "https://baptistefaisy.github.io/ghost-hours/"
+        default: "https://tradoooo.github.io/ghost-hours/"
         type: string
 
 concurrency:

@@ -1,6 +1,6 @@
 # Testing instructions for the judges
 
-**App:** <https://baptistefaisy.github.io/ghost-hours/> — static site, no account, no server, no
+**App:** <https://tradoooo.github.io/ghost-hours/> — static site, no account, no server, no
 network call after the page loads. Works in a private window.
 **Repo:** <https://github.com/BaptisteFaisy/ghost-hours> (MIT).
 
@@ -107,7 +107,7 @@ week**, then reopen **Invoice**. What to check:
 ## No network — verify it yourself
 
 Open DevTools → **Network** and reload: the only requests are the static assets served by
-`baptistefaisy.github.io` during the load. Then click everything — load the sample month, confirm
+`tradoooo.github.io` during the load. Then click everything — load the sample month, confirm
 blocks, settle the conflict, export, switch to French: **no new request appears** (HEU-N-01). The
 rule is enforced in CI by `scripts/check-no-network.mjs` (no `fetch`, XHR, WebSocket or remote
 `<script>` in `packages/` or `apps/`). Data lives in IndexedDB (localStorage fallback) and

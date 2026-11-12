@@ -9,7 +9,7 @@
 # Réglages par variables d'environnement : SITE_URL, SITE_MARKER, CURL_TIMEOUT.
 set -euo pipefail
 
-SITE_URL="${SITE_URL:-https://baptistefaisy.github.io/ghost-hours/}"
+SITE_URL="${SITE_URL:-https://tradoooo.github.io/ghost-hours/}"
 SITE_MARKER="${SITE_MARKER:-Ghost Hours}"
 CURL_TIMEOUT="${CURL_TIMEOUT:-30}"
 HTML_FILE="$(mktemp)"

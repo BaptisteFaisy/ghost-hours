@@ -16,7 +16,7 @@ Built for the [Kiroween 2026](https://kiroween.devpost.com/) hackathon, **Franke
 
 ## Try it
 
-**<https://baptistefaisy.github.io/ghost-hours/>** — click **Load the sample month**. It loads a
+**<https://tradoooo.github.io/ghost-hours/>** — click **Load the sample month**. It loads a
 fictitious November for a fictitious freelancer with three clients and shows:
 
 > **104 h found · 92 h declared · 12 ghost hours · €780**
