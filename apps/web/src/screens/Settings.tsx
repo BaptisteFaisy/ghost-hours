@@ -3,6 +3,7 @@ import { useI18n } from '../i18n/index.ts';
 import { useApp, useDispatch, eraseEverything } from '../state/store.tsx';
 import { ImportPanel } from '../components/ImportPanel.tsx';
 import { AuditLog } from '../components/AuditLog.tsx';
+import { LoadRealMonthButton } from '../components/realMonth.tsx';
 import { storageKind } from '../state/persistence.ts';
 import type { StorageKind } from '../state/persistence.ts';
 import type { MessageKey } from '../i18n/index.ts';
@@ -48,6 +49,7 @@ function DataSection(): JSX.Element {
       <button type="button" onClick={() => dispatch({ type: 'loadSampleMonth' })}>
         {t('settings.loadSample')}
       </button>{' '}
+      <LoadRealMonthButton />{' '}
       {confirming ? (
         <span aria-live="polite">
           <span>{t('settings.eraseConfirm')}</span>{' '}

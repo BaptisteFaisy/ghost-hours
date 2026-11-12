@@ -59,6 +59,9 @@ importers:
       '@ghost-hours/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@ghost-hours/fixture-real-month':
+        specifier: workspace:*
+        version: link:../../fixtures/real-month
       '@ghost-hours/fixture-sample-month':
         specifier: workspace:*
         version: link:../../fixtures/sample-month

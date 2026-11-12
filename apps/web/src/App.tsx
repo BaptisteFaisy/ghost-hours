@@ -9,6 +9,7 @@ import { Clients } from './screens/Clients.tsx';
 import { Invoice } from './screens/Invoice.tsx';
 import { Settings } from './screens/Settings.tsx';
 import { ImportPanel } from './components/ImportPanel.tsx';
+import { LoadRealMonthButton } from './components/realMonth.tsx';
 import type { StorageWarning } from './state/types.ts';
 import type { MessageKey } from './i18n/index.ts';
 
@@ -52,6 +53,7 @@ function Shell(): JSX.Element {
         </p>
       )}
       <StorageWarning />
+      <RealMonthNotice />
       <nav className="app-nav" aria-label={t('nav.label')}>
         <ul>
           {NAV_ITEMS.map((item) => (
@@ -105,6 +107,22 @@ function StorageWarning(): JSX.Element | null {
     <p className="storage-warning" role="alert">
       <strong>{t(STORAGE_MESSAGE[storageWarning.kind])}</strong>{' '}
       <span className="numeric">{storageWarning.reason}</span>
+    </p>
+  );
+}
+
+/**
+ * Provenance, not a warning: when the month on screen is the real anonymized
+ * one, the shell says so in a note — a demo must never be mistaken for the
+ * reader's own work, and a real month must never look like invented data.
+ */
+function RealMonthNotice(): JSX.Element | null {
+  const { t } = useI18n();
+  const { datasetKind } = useApp();
+  if (datasetKind !== 'real') return null;
+  return (
+    <p className="real-month-notice" role="note">
+      {t('real.notice')}
     </p>
   );
 }
@@ -170,6 +188,7 @@ function EmptyState(): JSX.Element {
       >
         {t('empty.loadSample')}
       </button>{' '}
+      <LoadRealMonthButton />{' '}
       <button
         type="button"
         aria-expanded={importing}

@@ -205,6 +205,11 @@ export const en = {
   'empty.loadSample': 'Load the sample month',
   'empty.import': 'Import your own files',
 
+  // --- the real month (October 2026, anonymized fixture) ---
+  'real.load': 'Load a real month (anonymized)',
+  'real.notice':
+    'A real month of October 2026: 977 proofs across three repositories. Instants, rhythm and volumes are genuine; names and branches are pseudonymized, no commit message was ever read, and the hourly rate is fictional.',
+
   'error.persistence': 'The data could not be saved in this browser.',
   'error.persistRead': 'The saved data could not be read.',
   'error.persistParse': 'The saved data was not valid and was ignored.',
