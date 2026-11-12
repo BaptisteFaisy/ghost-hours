@@ -38,7 +38,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 5
     env:
-      GHOST_HOURS_URL: https://baptistefaisy.github.io/ghost-hours/
+      GHOST_HOURS_URL: https://tradoooo.github.io/ghost-hours/
       GHOST_HOURS_BROWSERS: webkit,mobile-safari
     steps:
       - uses: actions/checkout@v4

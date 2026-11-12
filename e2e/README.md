@@ -23,7 +23,7 @@ GHOST_HOURS_URL=http://localhost:4173/ghost-hours/ pnpm e2e
 Against the public site instead:
 
 ```bash
-GHOST_HOURS_URL=https://baptistefaisy.github.io/ghost-hours/ pnpm e2e
+GHOST_HOURS_URL=https://tradoooo.github.io/ghost-hours/ pnpm e2e
 ```
 
 The browser is the system one: `GHOST_HOURS_BROWSER` if set, otherwise the

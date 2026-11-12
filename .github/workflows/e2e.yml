@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 5
     env:
       # Public site after a deploy; local preview on a manual run.
-      GHOST_HOURS_URL: ${{ github.event_name == 'workflow_run' && 'https://baptistefaisy.github.io/ghost-hours/' || 'http://localhost:4173/ghost-hours/' }}
+      GHOST_HOURS_URL: ${{ github.event_name == 'workflow_run' && 'https://tradoooo.github.io/ghost-hours/' || 'http://localhost:4173/ghost-hours/' }}
       # The desktop suite and the phone suite, both on the system Chromium:
       # mobile emulation is a Chromium feature, so the phone layout is checked
       # after every deploy without downloading a browser (docs/BROWSERS.md).
