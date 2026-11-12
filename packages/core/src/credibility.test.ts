@@ -59,7 +59,7 @@ describe('the assumed share of a block', () => {
     clientId: 'acme',
     projectId: null,
     status: 'proposed',
-    origin: 'git',
+    origin: 'git-session',
     provenShare: 1,
     confidence: 'solid',
     assumedLeadInMinutes: 0,
