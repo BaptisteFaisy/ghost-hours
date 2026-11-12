@@ -82,8 +82,7 @@ export interface StartResolution {
   readonly start: Instant;
   readonly assumedLeadInMinutes: Minutes;
   readonly startKind: 'checkout' | 'assumed';
-  /** `day-cap`: the day already spent its assumed start, so this one assumes nothing. */
-  readonly boundedBy: 'previous-proof' | 'workday-start' | 'none' | 'day-cap';
+  readonly boundedBy: 'previous-proof' | 'workday-start' | 'none';
 }
 
 /**
@@ -172,26 +171,10 @@ export function buildSessions(
   const tailMs = minutesToMs(settings.tailMinutes);
   const sessions: Session[] = [];
   const tooShort: PointProof[] = [];
-  // The day's assumed budget (idea: the anti-inflation rule).
-  //
-  // The assumed lead-in answers "you were working before your first commit".
-  // That is a fair question; asked again after every break, it becomes a way
-  // to add time — commit every ninety minutes and each session collects its
-  // own thirty minutes of invented morning. So the day has a budget: the
-  // assumed minutes of that day may not exceed one full lead-in
-  // (`leadInMaxMinutes`). A normal day with a long break keeps both of its
-  // lead-ins (30 + 30 = 60, under the budget); a day farmed with commits
-  // loses the excess. The day may be under-counted; it is never over-counted.
-  const assumedByDay = new Map<string, Minutes>();
   for (const clientId of clientIdsOf(sorted)) {
     const own = sorted.filter((point) => (point.evidence.clientId ?? '') === clientId);
     for (const run of splitIntoRuns(own, gapMs, breakMs)) {
-      const built = toSession(run, clientId, sorted, checkouts, settings, minMs, tailMs);
-      if (built === null) {
-        tooShort.push(...run.points);
-        continue;
-      }
-      const session = capAssumption(built, assumedByDay, settings, minMs);
+      const session = toSession(run, clientId, sorted, checkouts, settings, minMs, tailMs);
       if (session === null) tooShort.push(...run.points);
       else sessions.push(session);
     }
@@ -201,48 +184,6 @@ export function buildSessions(
 
 function clientIdsOf(sorted: readonly PointProof[]): string[] {
   return [...new Set(sorted.map((point) => point.evidence.clientId ?? ''))].sort();
-}
-
-/**
- * The day a session belongs to: the day of its **first proof**, not of its
- * start. An assumed lead-in can push the start before midnight, and the day
- * that owns the work is the day the work was proved.
- */
-function dayOfProof(session: Session, settings: ReconstructionSettings): string {
-  const instant = session.points[0]?.at ?? session.start;
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: settings.timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(instant));
-}
-
-/**
- * Spend the day's assumed budget, and give back what does not fit.
- *
- * A session whose assumed start is cut may fall under the minimum session
- * length: it is then returned as `null`, and its proofs are listed as too
- * short — listed, never billed (the product's rule for proofs that stand
- * alone).
- */
-function capAssumption(
-  session: Session,
-  assumedByDay: Map<string, Minutes>,
-  settings: ReconstructionSettings,
-  minMs: number,
-): Session | null {
-  if (session.assumedLeadInMinutes <= 0) return session;
-  const day = dayOfProof(session, settings);
-  const spent = assumedByDay.get(day) ?? 0;
-  const remaining = Math.max(0, settings.leadInMaxMinutes - spent);
-  const granted = Math.min(session.assumedLeadInMinutes, remaining);
-  assumedByDay.set(day, spent + granted);
-  if (granted === session.assumedLeadInMinutes) return session;
-  const first = session.points[0];
-  const start = first === undefined ? session.start : first.at - minutesToMs(granted);
-  if (session.end - start < minMs) return null;
-  return { ...session, start, assumedLeadInMinutes: granted, boundedBy: 'day-cap' };
 }
 
 function toSession(

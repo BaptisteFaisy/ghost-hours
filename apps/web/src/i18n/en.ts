@@ -308,8 +308,6 @@ export const en = {
   'reason.boundedBy.previous-proof': 'Shortened by the previous proof of another client.',
   'reason.boundedBy.workday-start': 'Shortened by the workday start.',
   'reason.boundedBy.none': 'Nothing shortened it.',
-  'reason.boundedBy.day-cap':
-    'Shortened by the day: the assumed start is granted once a day, so a day farmed with commits cannot add invented minutes.',
   'reason.resume': 'Resumes after a {minutes} min pause: nothing is assumed before it.',
   'reason.meeting': 'Exact bounds of the calendar entry.',
   'reason.manual': 'Declared by you, not proven.',

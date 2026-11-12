@@ -21,19 +21,6 @@ yesterday was today.
 
 ## The four layers
 
-### 0. The day's assumed budget — the inflation vector, closed
-
-The product never counts a proof twice, but it *does* grant an assumed lead-in: the work you may
-have done before your first commit of a session. That is a fair question twice a day — before the
-morning commit, before the one after lunch. It becomes a way to **add** time if you ask it every
-ninety minutes: commit hourly, and every session collects its own thirty invented minutes.
-
-So the day has a budget: the assumed minutes of one calendar day may not exceed one full lead-in
-(`leadInMaxMinutes`). A normal day keeps both of its lead-ins (30 + 60 = under the budget); a day
-farmed with commits loses the excess, and the block says which constraint shortened it
-(`reason.boundedBy.day-cap`). The day may be under-counted; it is never over-counted.
-
-
 ### 1. Signature and committer, per commit
 
 The collector (read-only) now reads `%G?`, `%GS`, `%GK`, `%ce` and `%cI` for every commit. Each
