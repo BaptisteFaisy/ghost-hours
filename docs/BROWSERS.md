@@ -35,9 +35,9 @@ fallback has a test.
 
 | Engine | Suite | Where |
 |---|---|---|
-| Chromium (system Chrome) | `e2e/smoke.spec.ts` — 4 tests | every deploy and every pull request's post-deploy run (`.github/workflows/e2e.yml`) |
-| Chromium, iPhone 13 emulation (390×664, touch) | `e2e/mobile.spec.ts` — 4 tests | same workflow: the phone layout is engine-independent, and mobile emulation needs no download |
-| Firefox | `e2e/smoke.spec.ts` | `.github/workflows/browser-matrix.yml`, on demand; run locally before a submission |
+| Chromium (system Chrome) | `e2e/smoke.spec.ts` — 4 tests | every deploy (`.github/workflows/e2e.yml`) — observed green against the public URL |
+| Chromium, iPhone 13 emulation (390×664, touch) | `e2e/mobile.spec.ts` — 4 tests | same workflow, same run: 8 tests green after the deploy of `4b49438`. The phone layout is engine-independent, and mobile emulation needs no download |
+| Firefox | `e2e/smoke.spec.ts` — 4 tests | `.github/workflows/browser-matrix.yml`, on demand — observed green **on the CI runner** (4/4 against the public URL): the browser installs there and stays cached |
 | WebKit (Safari engine), desktop | `e2e/smoke.spec.ts` | same, on a host that can run WebKit |
 | WebKit, iPhone 13 emulation | `e2e/mobile.spec.ts` | same |
 
