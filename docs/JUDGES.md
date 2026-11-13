@@ -139,8 +139,8 @@ node packages/collector/bin/ghost-hours.mjs collect ~/code \
 
 `.kiro/` is tracked at the root of the repository (a CI guard, `scripts/check-kiro-tracked.mjs`,
 refuses any attempt to gitignore it). It holds: **10 steering files** (6 `always`, 3 `fileMatch`,
-1 `manual`), **6 specs** (`collector`, `ics-import`, `intervals`, `sessionizer`, `billing`,
-`review-ui`) with EARS requirements carrying the `HEU-F-nn` identifiers, **5 hook files** (five
+1 `manual`), **7 specs** (`collector`, `ics-import`, `intervals`, `sessionizer`, `billing`,
+`review-ui`, `e2e-smoke`) with EARS requirements carrying the `HEU-F-nn` identifiers, **5 hook files** (five
 `command` actions that cost no credits, one `agent` action), **3 custom agents** (two read-only
 reviewers, one restricted property-tester) and **2 skills** (`sample-month`, `property-hunt`).
 [`KIRO_JOURNAL.md`](../KIRO_JOURNAL.md) answers the eight questions of the submission form as the

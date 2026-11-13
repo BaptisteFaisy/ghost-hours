@@ -1,8 +1,8 @@
 # Running the Kiro session that the journal is missing
 
-The repository carries seven specs, ten steering files, five hooks, three custom agents and two
-skills. What it does **not** yet carry is the trace of a session where the tool itself did the
-work: the journal marks those measurements `TODO(measure)` because they cannot be invented.
+The repository carries seven specs, ten steering files, five hook files (six actions), three custom
+agents and two skills. What it does **not** yet carry is the trace of a session where the tool itself
+did the work: the journal marks those measurements `TODO(measure)` because they cannot be invented.
 
 This page is the shortest path from "the folder is ready" to "the journal is honest".
 
