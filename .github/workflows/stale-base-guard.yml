@@ -26,9 +26,13 @@ concurrency:
 jobs:
   guard:
     name: stale-base-guard
-    runs-on: [self-hosted, ghost-hours-worker]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Identité git (absente par défaut sur un runner GitHub-hosted)
+        run: |
+          git config --global user.name "CI (GitHub Actions)"
+          git config --global user.email "ci@users.noreply.github.com"
       - name: Mesurer le retard sur la base
         env:
           PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr_number }}

@@ -23,7 +23,7 @@ permissions:
 jobs:
   ci:
     name: ci
-    runs-on: [self-hosted, linux, x64, ghost-hours-worker]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +34,17 @@ jobs:
 
       # Persistent workspace: a leftover folder from a previous run can fool a
       # test. Full clean; nothing to preserve (the store lives outside).
+      - name: Identité git (absente par défaut sur un runner GitHub-hosted)
+        run: |
+          git config --global user.name "CI (GitHub Actions)"
+          git config --global user.email "ci@users.noreply.github.com"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
       - name: Clean workspace
         shell: bash
         run: git clean -ffdx
@@ -48,7 +59,7 @@ jobs:
           source .github/ci/toolchain.sh
           # Self-hosted runners are persistent: the store lives on the machine,
           # so an install is a link farm, not a download.
-          pnpm install --frozen-lockfile --prefer-offline --store-dir "$HOME/tools/pnpm-store"
+          pnpm install --frozen-lockfile --prefer-offline
 
       - name: Types
         shell: bash

@@ -47,9 +47,13 @@ concurrency:
 jobs:
   couche0:
     name: couche0
-    runs-on: [self-hosted, linux, x64, ghost-hours-worker]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Identité git (absente par défaut sur un runner GitHub-hosted)
+        run: |
+          git config --global user.name "CI (GitHub Actions)"
+          git config --global user.email "ci@users.noreply.github.com"
       - name: Récupérer le garde depuis main, puis contrôler la PR
         env:
           GITHUB_TOKEN: ${{ github.token }}
