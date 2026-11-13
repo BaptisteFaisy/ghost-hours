@@ -91,9 +91,10 @@ Invoice
 4. **Steering.** `time.md` (fileMatch on the time-sensitive packages) is the file that changed
    answers the most: it forbids `getFullYear()`-style local reads and names the helper to use
    instead. Before/after example in the journal.
-5. **Hooks.** Five hooks in the v1 format; four are `command` actions (no credits), one `agent`
-   action for the journal. Each hook guard is doubled in CI by a script in `scripts/`, because file
-   triggers only fire on agent-made edits. `TODO(measure)`: trigger counts per hook.
+5. **Hooks.** Six hook actions in the v1 format, across five files; five are `command` actions (no
+   credits), one `agent` action for the journal. Each hook guard is doubled in CI by a script in
+   `scripts/`, because file triggers only fire on agent-made edits. `TODO(measure)`: trigger counts
+   per hook.
 6. **Property tests.** Fourteen properties named after their `HEU-P-nn` identifier, generated with
    fast-check. `TODO(measure)`: the counterexamples found during a Kiro session; the ones listed in
    the journal were found by the property suite in CI.
@@ -126,17 +127,26 @@ separately, and never billed on its own. When a commit of one client falls insid
 another, the tool does not pick a winner. It raises a conflict and waits. A tracker that guesses is
 a tracker that inflates, and an invoice that inflates is a lie with a total at the bottom.
 
-The property that keeps me honest is six lines long:
+The property that keeps me honest (verbatim from `packages/sessionizer/src/properties.test.ts`,
+comments aside):
 
 ```ts
 describe('HEU-P-01 — no two blocks ever overlap', () => {
   it('holds for any scenario', () => {
-    fc.assert(fc.property(scenario, (evidence) => {
-      const blocks = run(evidence).blocks.filter((b) => b.status !== 'conflict');
-      for (let i = 0; i < blocks.length; i += 1)
-        for (let j = i + 1; j < blocks.length; j += 1)
-          expect(overlaps(span(blocks[i]), span(blocks[j]))).toBe(false);
-    }), { numRuns: 60 });
+    fc.assert(
+      fc.property(scenario, (evidence) => {
+        const blocks = run(evidence).blocks.filter((block) => block.status !== 'conflict');
+        for (let i = 0; i < blocks.length; i += 1) {
+          for (let j = i + 1; j < blocks.length; j += 1) {
+            const a = blocks[i];
+            const b = blocks[j];
+            if (!a || !b) continue;
+            expect(overlaps(makeInterval(a.start, a.end), makeInterval(b.start, b.end))).toBe(false);
+          }
+        }
+      }),
+      { numRuns: 60 },
+    );
   });
 });
 ```
@@ -153,7 +163,7 @@ the identifiers of the requirements, so a red test says *which promise* broke. T
 `time.md` is included only in the packages that touch dates, and it bans the local-time reads that
 cause DST bugs — the kind of rule that is useless as a comment and useful as context. The hooks run
 the interval properties on every save in the two packages where a minute can be stolen, and a
-privacy guard fails the build if a real client domain ever reaches the tree. Four of the five hooks
+privacy guard fails the build if a real client domain ever reaches the tree. Five of the six hooks
 are shell commands, because a guard that costs credits is a guard you switch off.
 
 The demo month is fictitious on purpose: `example.com` addresses, three invented clients, and a
