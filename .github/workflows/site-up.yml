@@ -33,7 +33,7 @@ jobs:
     # l'URL publique depuis ce runner après chaque déploiement, donc son accès
     # Internet vers tradoooo.github.io est prouvé ; on suit ce choix.
     # Aucun toolchain du dépôt nécessaire : shell + curl suffisent.
-    runs-on: [self-hosted, linux, x64, ghost-hours-worker]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       SITE_URL: https://tradoooo.github.io/ghost-hours/
