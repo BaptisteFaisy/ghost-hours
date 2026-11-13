@@ -1,0 +1,103 @@
+name: CI
+
+# Verdict in five minutes at most, from the first job started to the last
+# finished (hard project rule). One job, six steps: types, lint, tests, build,
+# contest compliance, and the self-tests of the CI guards.
+#
+# The check published by this workflow is named `ci` (a job names its check):
+# it is required by the `main` ruleset and by the Mergify queue, together with
+# `ci-budget` and `couche0`.
+on:
+  pull_request:
+  # Merge queue: the same control on the group's temporary commit.
+  merge_group:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          clean: false
+
+      # Persistent workspace: a leftover folder from a previous run can fool a
+      # test. Full clean; nothing to preserve (the store lives outside).
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '9.15.4'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Clean workspace
+        shell: bash
+        run: git clean -ffdx
+
+      - name: Toolchain
+        shell: bash
+        run: source .github/ci/toolchain.sh
+
+      - name: Install
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          # Self-hosted runners are persistent: the store lives on the machine,
+          # so an install is a link farm, not a download.
+          pnpm install --frozen-lockfile --prefer-offline --store-dir "$HOME/tools/pnpm-store"
+
+      - name: Types
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm typecheck
+
+      - name: Lint
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm lint
+
+      - name: Tests
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm test
+
+      - name: Build
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          pnpm build
+
+      # Contest compliance: `.kiro/` tracked at the root, MIT licence, README,
+      # no real client data, no network call in the shipped code.
+      - name: Contest compliance
+        shell: bash
+        run: |
+          source .github/ci/toolchain.sh
+          node scripts/check-kiro-tracked.mjs
+          node scripts/check-privacy.mjs
+          node scripts/check-no-network.mjs
+
+      # The guards test themselves: couche0 and the conflict agents.
+      - name: Guard self-tests
+        shell: bash
+        run: |
+          python3 .github/couche0/test_check_couche0.py
+          python3 .github/fireworks/test_conflict_agent.py
+          python3 .github/fireworks/test_test_agent.py
+          python3 .github/fireworks/test_scope_agent.py
+          python3 .github/fireworks/test_union_journal.py
+          python3 .github/fireworks/test_quota.py

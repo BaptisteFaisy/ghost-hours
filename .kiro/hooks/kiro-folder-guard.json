@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "kiro-folder-guard",
+      "description": "Before a write, check that .kiro still exists, that no .gitignore line hides it, and that LICENSE is present. Exit code 2 refuses the tool call. This is the automated version of the contest rule 'dossier /.kiro à la racine et absent du .gitignore': the cheapest possible mistake to make, and the only one that disqualifies the project.",
+      "trigger": "PreToolUse",
+      "matcher": "write",
+      "action": {
+        "type": "command",
+        "command": "node scripts/check-kiro-tracked.mjs --block"
+      },
+      "timeout": 60,
+      "enabled": true
+    }
+  ]
+}

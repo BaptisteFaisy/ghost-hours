@@ -1,0 +1,110 @@
+/**
+ * The phone layer.
+ *
+ * Nothing here is decoration. Each rule fixes something a real phone exposes
+ * and an emulator cannot show, measured on the public site at 390 px:
+ *
+ * - **iOS zooms the whole page in** when a focused field's font is under 16 px,
+ *   and leaves it zoomed. The client picker was 11.5 px, so choosing a client
+ *   on a phone blew the interface up.
+ * - **A thumb needs a target**: Apple asks for 44×44 px. The navigation was
+ *   38 px tall, the gestures of a block 24 px wide, and their labels were set
+ *   at 0.62 rem — a size nobody reads.
+ * - **`100vh` on iOS is the viewport *without* the browser bars**: the bottom of
+ *   the page hides under them. `100dvh` measures what the reader actually sees.
+ *
+ * The rules live apart from `theme.css` for the same reason as `notices.css`:
+ * that file is 702 lines, above the 500-line budget the project applies, and it
+ * owes a split (tokens / components / print) that growing it would only delay.
+ */
+
+/* The visible area, not the largest one. Falls back to 100vh where `dvh` is
+   unknown (Safari 14, the oldest engine this project claims). */
+.app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+@media (max-width: 720px) {
+  /* A field under 16 px makes iOS zoom the page on focus. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .block-client-picker select {
+    font-size: 16px;
+    padding: 6px 8px;
+  }
+
+  /* Six destinations, six targets a thumb does not miss. */
+  .app-nav button {
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+
+  /* Every control of the interface is a target: the month navigation, the
+     filters, the forms, the tables. */
+  .app-main button,
+  .app-main input,
+  .app-main select {
+    min-height: 44px;
+  }
+
+  /* WebKit sizes a `<select>` by its content and ignores `min-height`: the client
+     filter measured 23 px tall on Safari where Chromium gave it 44. An explicit
+     height is honoured by both engines. */
+  .app-main select {
+    height: 44px;
+  }
+
+  /* A button is as narrow as its label: the rule removers of the Clients screen
+     measured 37 px on Safari (40 px on Chromium), which is under the threshold
+     a thumb can hit. Both dimensions, then: a target is a square, not a line. */
+  .app-main button {
+    min-width: 44px;
+  }
+  }
+
+  /* The gestures of a block: a glyph is not a target, and 0.62 rem is not a
+     label. The grid of the week keeps its compact gestures — a column of the
+     timeline is 48 px wide, so the gestures there belong to the table view,
+     which is the default on a phone. */
+  .block-actions button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  .block-actions .action-glyph {
+    font-size: 1.05rem;
+  }
+
+  .week-timetable .block-actions button {
+    min-width: 0;
+    min-height: 0;
+    padding: 2px 5px;
+    font-size: 0.62rem;
+  }
+
+  /* On a phone the grid is a read-only timeline: the gestures and the client
+     picker live in the table view, which is the default there — and a picker
+     set at 11.5 px would make iOS zoom the page in. */
+  .week-timetable .block-client-picker {
+    display: none;
+  }
+
+  /* A checkbox is 13 px: it takes a finger, not a cursor. Its label is the
+     real target, so the label gets the room. */
+  input[type='checkbox'] {
+    width: 24px;
+    height: 24px;
+  }
+
+  label[for='ignore-automation'] {
+    display: inline-block;
+    padding: 8px 6px 8px 0;
+  }
+}

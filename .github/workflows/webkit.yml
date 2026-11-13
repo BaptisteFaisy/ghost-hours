@@ -1,0 +1,77 @@
+name: WebKit (real Safari engine)
+
+# Le seul moteur qu'on ne peut pas faire tourner sur le runner Linux : WebKit.
+# Plutôt que d'attendre un Mac ou un iPhone sous la main, on prend un runner
+# macOS hébergé par GitHub — gratuit sur un dépôt public — et on y lance la
+# vraie suite sur le vrai moteur, iPhone 13 compris (l'émulation `isMobile` de
+# Playwright n'existe que sur WebKit/macOS).
+#
+# Aucun build ici : on teste l'URL publique, celle des juges. Si le déploiement
+# a menti, ce workflow le dit.
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy (GitHub Pages)"]
+    types: [completed]
+  # Un déploiement ne change que l'application : une PR qui ne touche que la
+  # suite e2e ne redéploie rien, et la ligne Safari n'était donc pas rejouée
+  # sur elle. Ici, toute modification de la suite ou du produit la rejoue.
+  push:
+    branches: [main]
+    paths:
+      - "e2e/**"
+      - "apps/**"
+      - "packages/**"
+      - "fixtures/**"
+      - ".github/workflows/webkit.yml"
+
+concurrency:
+  group: webkit-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  webkit:
+    name: webkit
+    runs-on: macos-latest
+    timeout-minutes: 5
+    env:
+      GHOST_HOURS_URL: https://tradoooo.github.io/ghost-hours/
+      GHOST_HOURS_BROWSERS: webkit,mobile-safari
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # La racine seulement : la suite e2e n'a besoin que de Playwright et des
+      # deux `expected.json`, qu'elle lit directement dans `fixtures/` — aucun
+      # paquet workspace, aucun build. Sur un runner macOS sans cache c'est la
+      # différence entre tenir et exploser le budget de cinq minutes.
+      - name: Install
+        run: pnpm install --frozen-lockfile --prefer-offline --ignore-scripts --filter=.
+
+      - name: WebKit
+        run: pnpm exec playwright install webkit
+
+      - name: Suite on WebKit
+        run: pnpm e2e
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: webkit-artifacts
+          path: e2e/artifacts
+          retention-days: 7
+          if-no-files-found: ignore

@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+node_modules/
+dist/
+coverage/
+*.local
+.DS_Store
+.vite/
+# Real evidence must never be committed (HEU-N-06). Only fixtures/ is tracked.
+evidence.json
+evidence-*.json
+!fixtures/**/evidence.json
+.real/
+.env
+.env.*
+# Playwright outputs (videos, traces, screenshots) are build artifacts.
+e2e/artifacts/
+test-results/

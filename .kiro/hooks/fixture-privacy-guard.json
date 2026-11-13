@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "fixture-privacy-guard",
+      "description": "Refuse any save that puts a non-fictional email address or domain into the tree (HEU-N-06). This is the hook shown on screen in the demo: the product promises no real client data, and the repository it is built in is held to the same rule.",
+      "trigger": "PostFileSave",
+      "matcher": "^(fixtures|packages|apps).*\\.(json|ics|md|ts)$",
+      "action": {
+        "type": "command",
+        "command": "node scripts/check-privacy.mjs"
+      },
+      "timeout": 120,
+      "enabled": true
+    }
+  ]
+}
