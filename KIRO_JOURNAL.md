@@ -169,13 +169,18 @@ The form's eighth question asks for one honest difficulty. These are real, from 
    for this project, and inventing one to tick a box would have been dishonest. The form answer says
    so plainly.
 
-## 6. Submission artefacts still to produce
+## 6. Submission artefacts — state
 
-- [ ] README in English with the dependency licence table.
-- [ ] `docs/acceptance.md` with the eight acceptance checks of D.17.
-- [ ] Video script (D.16), under 3 minutes, four beats.
-- [ ] Blog post and social post for the bonuses.
-- [ ] Fill every `TODO(measure)` in this file from a real Kiro session.
+- [x] README in English with the dependency licences (listed in prose, `README.md:185`).
+- [x] `docs/ACCEPTANCE.md` with the eight acceptance checks of D.17.
+- [x] Video script (D.16), under 3 minutes — `docs/SUBMISSION.md` §6, cut into seven beats; the
+      montage and the English subtitles are generated from `~/Bureau/ghost-hours-video/`
+      (`beats.mjs` → `make-subtitles.mjs` → `record-beats.mjs` → `assemble.sh`), kept out of the
+      repository because they carry the video, not the code.
+- [x] Blog post and social post drafts — `docs/SUBMISSION.md` §4 and §5. Publishing them on a
+      third-party platform is a human step (needs a real account), not done here.
+- [ ] Fill every `TODO(measure)` in this file from a real Kiro session — still open, needs a
+      session in Kiro (IDE/CLI/Web split, spec-vs-vibe codings timings, hook trigger counts).
 
 ### End-to-end smoke suite implemented and run (browser, 4 tests)
 
